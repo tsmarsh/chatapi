@@ -1,0 +1,33 @@
+org: tsmarsh
+app: boobees
+service: boobees
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: java17
+  region: us-east-1
+
+package:
+  artifact: target/boobees-dev.jar
+
+functions:
+  webhook:
+    handler: com.tailoredshapes.boobees.Handler
+    events:
+      - http:
+          path: webhook
+          method: post
+          cors: true
+    environment:
+      OPENAI_API_KEY: ${self:custom.secrets.OPENAI_API_KEY}
+      TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
+
+custom:
+  secrets: ${file(secrets.${opt:stage, self:provider.stage}.yml)}
+
+plugins:
+  - serverless-offline
+  - serverless-secrets-plugin
+  - serverless-sam

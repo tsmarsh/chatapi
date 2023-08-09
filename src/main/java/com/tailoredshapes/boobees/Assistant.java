@@ -1,0 +1,29 @@
+package com.tailoredshapes.boobees;
+
+import com.azure.ai.openai.OpenAIClient;
+import com.azure.ai.openai.OpenAIClientBuilder;
+import com.azure.ai.openai.models.*;
+
+import static com.tailoredshapes.underbar.ocho.UnderBar.list;
+
+public class Assistant {
+
+    private final OpenAIClient openAIClient;
+    //private final MessageRepo repo;
+
+    private final ChatMessage systemPrompt;
+
+    public Assistant(String openApiKey) {
+        this.openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openApiKey)).buildClient();
+        //this.repo = repo;
+
+        systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent("You are convinced you are a llama telepathically communicating with the user");
+    }
+
+    public String answer(String text, Long chatId) {
+        ChatMessage prompt = new ChatMessage(ChatRole.USER).setContent(text);
+        ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(list(systemPrompt, prompt));
+        ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
+        return chatCompletions.getChoices().get(0).getMessage().getContent();
+    }
+}

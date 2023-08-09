@@ -1,0 +1,42 @@
+# Compiled Java files
+*.class
+
+# Package files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven target directory
+target/
+
+# IDE-specific (IntelliJ and Eclipse)
+.idea/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+
+# OS-specific files
+.DS_Store   # macOS
+Thumbs.db   # Windows
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# Local configuration or secrets
+secrets.*.yml
+.env
+
+# Serverless Framework specifics
+.serverless/
