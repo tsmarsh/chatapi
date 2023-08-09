@@ -6,6 +6,7 @@ import com.azure.ai.openai.models.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.tailoredshapes.underbar.ocho.UnderBar.list;
@@ -32,7 +33,9 @@ public class Assistant {
     }
 
     public String answer(List<String> prompts, Long chatId) {
-        List<ChatMessage> aiPrompts = list(systemPrompt);
+        List<ChatMessage> aiPrompts = new ArrayList<>();
+        aiPrompts.add(systemPrompt);
+        
         aiPrompts.addAll(map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m)));
 
         ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);

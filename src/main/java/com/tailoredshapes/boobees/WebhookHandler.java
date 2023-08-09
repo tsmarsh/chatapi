@@ -43,7 +43,7 @@ public class WebhookHandler implements RequestHandler<Map<String, Object>, ApiGa
 			SendMessageRequest send_msg_request = new SendMessageRequest()
 					.withQueueUrl(queueUrl)
 					.withMessageGroupId(chat.id().toString())
-					.withMessageBody(text);
+					.withMessageBody(body);
 
 			sqs.sendMessage(send_msg_request);
 		} catch(Exception e){

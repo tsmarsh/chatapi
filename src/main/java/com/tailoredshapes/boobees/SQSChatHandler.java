@@ -58,6 +58,7 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
                 messages.get(chat.id()).add(prompt);
             } catch (Exception e){
                 LOG.error("Failed to parse telegram message", e);
+                LOG.error("message: " + text);
                 fails.add(SQSBatchResponse.BatchItemFailure.builder().withItemIdentifier(msg.getMessageId()).build());
             }
         }
