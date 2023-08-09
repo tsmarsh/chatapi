@@ -16,13 +16,13 @@ public class Assistant {
 
     private final ChatMessage systemPrompt;
 
-    public Assistant(String openApiKey) {
+    public Assistant(String openApiKey, String personality) {
         LOG.info("Initializing Assistant with key: " + openApiKey);
 
         this.openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openApiKey)).buildClient();
         //this.repo = repo;
 
-        systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent("You are convinced you are a llama telepathically communicating with the user");
+        systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
     }
 
     public String answer(String text, Long chatId) {

@@ -40,3 +40,4 @@ secrets.*.yml
 
 # Serverless Framework specifics
 .serverless/
+/.env.qa

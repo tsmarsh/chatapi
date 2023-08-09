@@ -23,9 +23,12 @@ functions:
     environment:
       OPENAI_API_KEY: ${self:custom.secrets.OPENAI_API_KEY}
       TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
+      SYSTEM_PROMPT: ${self:custom.env.SYSTEM_PROMPT}
+
 
 custom:
   secrets: ${file(secrets.${opt:stage, self:provider.stage}.yml)}
+  env: ${file(config.${opt:stage, self:provider.stage}.yml)}
 
 plugins:
   - serverless-offline
