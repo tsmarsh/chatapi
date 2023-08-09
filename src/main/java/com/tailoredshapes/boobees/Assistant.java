@@ -15,14 +15,18 @@ public class Assistant {
 
     private static final Logger LOG = LogManager.getLogger(Assistant.class);
     private final OpenAIClient openAIClient;
-    //private final MessageRepo repo;
 
     private final ChatMessage systemPrompt;
 
     public Assistant(String openApiKey, String personality) {
         LOG.info("Initializing Assistant with key: " + openApiKey);
 
-        this.openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openApiKey)).buildClient();
+        try {
+            this.openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openApiKey)).buildClient();
+        }catch (Exception e){
+            LOG.fatal("Cannot create OpenAI client", e);
+            throw e;
+        }
 
         systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
     }
@@ -32,7 +36,17 @@ public class Assistant {
         aiPrompts.addAll(map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m)));
 
         ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);
-        ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
-        return chatCompletions.getChoices().get(0).getMessage().getContent();
+
+        String message = "brb";
+
+        try {
+            ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
+            message = chatCompletions.getChoices().get(0).getMessage().getContent();
+        }catch (Exception e){
+            LOG.error("OpenAI is screwing around again", e);
+        }
+
+        return message;
+
     }
 }

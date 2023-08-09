@@ -9,7 +9,11 @@ import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Chat;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.request.ChatAction;
+import com.pengrad.telegrambot.request.SendChatAction;
 import com.pengrad.telegrambot.request.SendMessage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,6 +29,8 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
     private final Assistant assistant;
     private final TelegramBot telegramBot;
 
+    private static final Logger LOG = LogManager.getLogger(SQSChatHandler.class);
+
     public SQSChatHandler(){
         openaiApiKey = System.getenv("OPENAI_API_KEY");
         systemPrompt = System.getenv("SYSTEM_PROMPT");
@@ -35,31 +41,57 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
 
     public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
         Map<Long, List<String>> messages = new HashMap<>(event.getRecords().size());
+        List<SQSBatchResponse.BatchItemFailure> fails = new ArrayList<>();
 
         for (SQSEvent.SQSMessage msg : event.getRecords()) {
             String text = msg.getBody();
 
-            Update update = BotUtils.parseUpdate(text);
+            try {
+                Update update = BotUtils.parseUpdate(text);
+                Chat chat = update.message().chat();
+                String prompt = update.message().text();
 
-            Chat chat = update.message().chat();
-            String prompt = update.message().text();
+                if(!messages.containsKey(chat.id())){
+                    messages.put(chat.id(), new ArrayList<>());
+                }
 
-            if(!messages.containsKey(chat.id())){
-                messages.put(chat.id(), new ArrayList<>());
+                messages.get(chat.id()).add(prompt);
+            } catch (Exception e){
+                LOG.error("Failed to parse telegram message", e);
+                fails.add(SQSBatchResponse.BatchItemFailure.builder().withItemIdentifier(msg.getMessageId()).build());
             }
-
-            messages.get(chat.id()).add(prompt);
         }
 
+
         messages.forEach((chatId, msgs) -> {
-            String message = assistant.answer(msgs, chatId);
-            sendMessage(chatId, message);
+            try {
+                sendTyping(chatId);
+                String message = assistant.answer(msgs, chatId);
+                sendMessage(chatId, message);
+            } catch (Exception e) {
+                LOG.error("Error generating chat response", e);
+            }
         });
-        return new SQSBatchResponse();
+
+        return SQSBatchResponse.builder().withBatchItemFailures(fails).build();
     }
 
     public void sendMessage(Long chatId, String text){
         SendMessage message = new SendMessage(chatId, text);
-        telegramBot.execute(message);
+        try {
+            telegramBot.execute(message);
+        }catch (Exception e){
+            LOG.error("Failed to send message to Telegram: " + message, e);
+        }
+    }
+
+    public void sendTyping(Long chatId){
+        SendChatAction sendChatAction = new SendChatAction(chatId, ChatAction.typing);
+        try {
+            telegramBot.execute(sendChatAction);
+        } catch (Exception e){
+            LOG.error("Failed to send typing", e);
+        }
+
     }
 }

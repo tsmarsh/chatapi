@@ -27,6 +27,7 @@ public class WebhookHandler implements RequestHandler<Map<String, Object>, ApiGa
 
 	public WebhookHandler(){
 		queueUrl = System.getenv("QUEUE_URL");
+		LOG.info("QUEUE_URL: " + queueUrl);
 		sqs = AmazonSQSClientBuilder.defaultClient();
 	}
 
@@ -36,14 +37,19 @@ public class WebhookHandler implements RequestHandler<Map<String, Object>, ApiGa
 		Chat chat = update.message().chat();
 		String text = update.message().text();
 
-		sendTyping(chat.id());
+		LOG.trace(String.format("Processing: %s for %d", text, chat.id()));
 
-		SendMessageRequest send_msg_request = new SendMessageRequest()
-				.withQueueUrl(queueUrl)
-				.withMessageGroupId(chat.id().toString())
-				.withMessageBody(text);
+		try {
+			SendMessageRequest send_msg_request = new SendMessageRequest()
+					.withQueueUrl(queueUrl)
+					.withMessageGroupId(chat.id().toString())
+					.withMessageBody(text);
 
-		sqs.sendMessage(send_msg_request);
+			sqs.sendMessage(send_msg_request);
+		} catch(Exception e){
+			LOG.error("Error putting message on queue", e);
+		}
+
 
 		Response responseBody = new Response("{\"success\": true}", input);
 
@@ -51,10 +57,5 @@ public class WebhookHandler implements RequestHandler<Map<String, Object>, ApiGa
 				.setStatusCode(200)
 				.setObjectBody(responseBody)
 				.build();
-	}
-
-	public void sendTyping(Long chatId){
-		SendChatAction sendChatAction = new SendChatAction(chatId, ChatAction.typing);
-		TELEGRAM_BOT.execute(sendChatAction);
 	}
 }

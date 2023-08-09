@@ -9,21 +9,27 @@ provider:
   runtime: java17
   region: us-east-1
   stage: dev
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:BatchWriteItem
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - Fn::GetAtt:
+                - UserChatQueue
+                - Arn
 
 package:
   artifact: target/boobees-dev.jar
 
-iamRoleStatements:
-  - Effect: Allow
-    Action:
-      - sqs:SendMessage
-      - sqs:ReceiveMessage
-      - sqs:DeleteMessage
-      - sqs:GetQueueAttributes
-    Resource:
-      - Fn::GetAtt:
-          - UserChatQueue
-          - Arn
 
 functions:
   webhook:
