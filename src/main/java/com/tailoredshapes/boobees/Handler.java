@@ -35,6 +35,7 @@ public class Handler implements RequestHandler<Map<String, Object>, ApiGatewayRe
 		LOG.info("Input \n" + new Stash(input).toJSONString());
 
 		String openaiApiKey = System.getenv("OPENAI_API_KEY");
+
 		var assistant = new Assistant(openaiApiKey);
 
 		Chat chat = update.message().chat();
