@@ -8,23 +8,56 @@ provider:
   name: aws
   runtime: java17
   region: us-east-1
+  stage: dev
 
 package:
   artifact: target/boobees-dev.jar
 
+iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - sqs:SendMessage
+      - sqs:ReceiveMessage
+      - sqs:DeleteMessage
+      - sqs:GetQueueAttributes
+    Resource:
+      - Fn::GetAtt:
+          - UserChatQueue
+          - Arn
+
 functions:
   webhook:
-    handler: com.tailoredshapes.boobees.Handler
+    handler: com.tailoredshapes.boobees.WebhookHandler
     events:
       - http:
           path: webhook
           method: post
           cors: true
     environment:
+      QUEUE_URL:
+        Ref: UserChatQueue
+
+  sqshandler:
+    handler: com.tailoredshapes.boobees.SQSChatHandler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - UserChatQueue
+              - Arn
+          batchSize: 10
+    environment:
       OPENAI_API_KEY: ${self:custom.secrets.OPENAI_API_KEY}
       TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
       SYSTEM_PROMPT: ${self:custom.env.SYSTEM_PROMPT}
 
+resources:
+  Resources:
+    UserChatQueue:
+      Properties:
+        QueueName: boobees-chat-queue-${opt:stage, self:provider.stage}.fifo
+        FifoQueue: true
+      Type: "AWS::SQS::Queue"
 
 custom:
   secrets: ${file(secrets.${opt:stage, self:provider.stage}.yml)}

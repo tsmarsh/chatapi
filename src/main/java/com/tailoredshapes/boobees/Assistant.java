@@ -6,7 +6,10 @@ import com.azure.ai.openai.models.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.List;
+
 import static com.tailoredshapes.underbar.ocho.UnderBar.list;
+import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
 public class Assistant {
 
@@ -20,14 +23,15 @@ public class Assistant {
         LOG.info("Initializing Assistant with key: " + openApiKey);
 
         this.openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openApiKey)).buildClient();
-        //this.repo = repo;
 
         systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
     }
 
-    public String answer(String text, Long chatId) {
-        ChatMessage prompt = new ChatMessage(ChatRole.USER).setContent(text);
-        ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(list(systemPrompt, prompt));
+    public String answer(List<String> prompts, Long chatId) {
+        List<ChatMessage> aiPrompts = list(systemPrompt);
+        aiPrompts.addAll(map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m)));
+
+        ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);
         ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
         return chatCompletions.getChoices().get(0).getMessage().getContent();
     }
