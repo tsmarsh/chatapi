@@ -45,6 +45,7 @@ functions:
 
   sqshandler:
     handler: com.tailoredshapes.boobees.SQSChatHandler
+    timeout: 45
     events:
       - sqs:
           arn:

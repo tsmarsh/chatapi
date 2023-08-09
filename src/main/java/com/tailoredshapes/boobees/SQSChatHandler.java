@@ -7,7 +7,6 @@ import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Chat;
-import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ChatAction;
 import com.pengrad.telegrambot.request.SendChatAction;
@@ -19,6 +18,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 
 public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
@@ -35,14 +36,50 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
         openaiApiKey = System.getenv("OPENAI_API_KEY");
         systemPrompt = System.getenv("SYSTEM_PROMPT");
 
-        assistant = new Assistant(openaiApiKey, systemPrompt);
+        assistant = new Assistant(openaiApiKey, systemPrompt, "brb");
         telegramBot = new TelegramBot(System.getenv("TELEGRAM_BOT_TOKEN"));
     }
+
 
     public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
         Map<Long, List<String>> messages = new HashMap<>(event.getRecords().size());
         List<SQSBatchResponse.BatchItemFailure> fails = new ArrayList<>();
 
+        extractMessagesFromEvent(event, messages, fails);
+
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+        messages.forEach((chatId, msgs) -> {
+            futures.add(CompletableFuture.runAsync(() -> {
+                try {
+                    sendTyping(chatId);
+                    String message = "that is harder to answer than I was expecting";
+                    try {
+                        CompletableFuture<String> completableAnswer = assistant.answerAsync(msgs, chatId);
+                        message = completableAnswer.get(40, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        LOG.error("Error generating chat response", e);
+                    } finally {
+                        sendMessage(chatId, message);
+                    }
+                } catch (Exception e) {
+                    LOG.error("Error generating chat response", e);
+                }
+            }));
+        });
+
+        // Wait for all futures to complete
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        return SQSBatchResponse.builder().withBatchItemFailures(fails).build();
+    }
+
+
+    protected void generateResponses(Map<Long, List<String>> messages) {
+
+    }
+
+    protected void extractMessagesFromEvent(SQSEvent event, Map<Long, List<String>> messages, List<SQSBatchResponse.BatchItemFailure> fails) {
         for (SQSEvent.SQSMessage msg : event.getRecords()) {
             String text = msg.getBody();
 
@@ -62,19 +99,6 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
                 fails.add(SQSBatchResponse.BatchItemFailure.builder().withItemIdentifier(msg.getMessageId()).build());
             }
         }
-
-
-        messages.forEach((chatId, msgs) -> {
-            try {
-                sendTyping(chatId);
-                String message = assistant.answer(msgs, chatId);
-                sendMessage(chatId, message);
-            } catch (Exception e) {
-                LOG.error("Error generating chat response", e);
-            }
-        });
-
-        return SQSBatchResponse.builder().withBatchItemFailures(fails).build();
     }
 
     public void sendMessage(Long chatId, String text){

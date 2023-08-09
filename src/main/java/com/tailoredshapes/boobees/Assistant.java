@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static com.tailoredshapes.underbar.ocho.UnderBar.list;
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
@@ -18,8 +19,9 @@ public class Assistant {
     private final OpenAIClient openAIClient;
 
     private final ChatMessage systemPrompt;
+    public final String failMessage;
 
-    public Assistant(String openApiKey, String personality) {
+    public Assistant(String openApiKey, String personality, String failMessage) {
         LOG.info("Initializing Assistant with key: " + openApiKey);
 
         try {
@@ -29,18 +31,20 @@ public class Assistant {
             throw e;
         }
 
-        systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
+        this.systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
+        this.failMessage = failMessage;
     }
 
     public String answer(List<String> prompts, Long chatId) {
         List<ChatMessage> aiPrompts = new ArrayList<>();
         aiPrompts.add(systemPrompt);
-        
+
         aiPrompts.addAll(map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m)));
 
         ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);
+        chatCompletionsOptions.setMaxTokens(200);
 
-        String message = "brb";
+        String message = failMessage;
 
         try {
             ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
@@ -50,6 +54,9 @@ public class Assistant {
         }
 
         return message;
+    }
 
+    public CompletableFuture<String> answerAsync(List<String> prompts, Long chatId){
+        return CompletableFuture.supplyAsync(() -> answer(prompts,chatId));
     }
 }
