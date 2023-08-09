@@ -63,6 +63,7 @@ resources:
       Properties:
         QueueName: boobees-chat-queue-${opt:stage, self:provider.stage}.fifo
         FifoQueue: true
+        ContentBasedDeduplication: true
       Type: "AWS::SQS::Queue"
 
 custom:
