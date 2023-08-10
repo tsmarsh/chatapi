@@ -19,7 +19,7 @@ public class Assistant {
 
     private final ChatMessage systemPrompt;
     public final String failMessage;
-    private MessageRepo repo;
+    private final MessageRepo repo;
 
     public Assistant(OpenAIClient openAIClient, String personality, String failMessage, MessageRepo repo) {
         this.repo = repo;

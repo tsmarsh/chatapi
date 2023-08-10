@@ -4,6 +4,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.azure.ai.openai.OpenAIClientBuilder;
 import com.azure.ai.openai.models.NonAzureOpenAIKeyCredential;
 import com.pengrad.telegrambot.BotUtils;
@@ -28,32 +30,27 @@ import java.util.concurrent.TimeUnit;
 
 public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
-    private final String openaiApiKey;
-    private final String systemPrompt;
-
-    private final Assistant assistant;
-    private final TelegramBot telegramBot;
-
     private static final Logger LOG = LogManager.getLogger(SQSChatHandler.class);
     private final SQSChatDelegate sqsChatDelegate;
 
     public SQSChatHandler() {
-        openaiApiKey = System.getenv("OPENAI_API_KEY");
-        systemPrompt = System.getenv("SYSTEM_PROMPT");
+        var openaiApiKey = System.getenv("OPENAI_API_KEY");
+        var systemPrompt = System.getenv("SYSTEM_PROMPT");
+        var queueUrl = System.getenv("QUEUE_URL");
 
         var dynamoDb = DynamoDbClient.builder().region(Region.US_EAST_1).build();
+
+        AmazonSQS sqs = AmazonSQSClientBuilder.defaultClient();
 
         var repo = new MessageRepo(System.getenv("TABLE_NAME"), dynamoDb);
         try {
             var openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openaiApiKey)).buildClient();
-            assistant = new Assistant(openAIClient, systemPrompt, "brb", repo);
+            var assistant = new Assistant(openAIClient, systemPrompt, "brb", repo);
+            sqsChatDelegate = new SQSChatDelegate(assistant, new TelegramRepo(System.getenv("TELEGRAM_BOT_TOKEN")), sqs, queueUrl);
         } catch (Exception e) {
             LOG.fatal("Cannot create OpenAI client", e);
             throw e;
         }
-        telegramBot = new TelegramBot(System.getenv("TELEGRAM_BOT_TOKEN"));
-
-        sqsChatDelegate = new SQSChatDelegate(assistant, telegramBot);
     }
 
 

@@ -3,9 +3,7 @@ package com.tailoredshapes.boobees;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.request.SendChatAction;
-import com.pengrad.telegrambot.request.SendMessage;
+import com.amazonaws.services.sqs.AmazonSQS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -14,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.LogManager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,14 +20,17 @@ import static org.mockito.Mockito.*;
 class SQSChatDelegateTest {
 
     private Assistant assistant;
-    private TelegramBot telegramBot;
+    private TelegramRepo telegramRepo;
     private SQSChatDelegate sqsChatDelegate;
+
+    private AmazonSQS sqs;
 
     @BeforeEach
     void setUp() {
         assistant = mock(Assistant.class);
-        telegramBot = mock(TelegramBot.class);
-        sqsChatDelegate = new SQSChatDelegate(assistant, telegramBot);
+        telegramRepo = mock(TelegramRepo.class);
+        sqs = mock(AmazonSQS.class);
+        sqsChatDelegate = new SQSChatDelegate(assistant, telegramRepo, sqs, "https://not.real/url");
     }
 
     @Test
@@ -52,12 +52,11 @@ class SQSChatDelegateTest {
     public void testHandleRequest() {
         // Mocking dependencies
         Assistant mockAssistant = mock(Assistant.class);
-        TelegramBot mockTelegramBot = mock(TelegramBot.class);
 
         CompletableFuture<String> futureResponse = CompletableFuture.completedFuture("answer");
         when(mockAssistant.answerAsync(any(), any())).thenReturn(futureResponse);
         // Create an instance of the class under test
-        SQSChatDelegate delegate = new SQSChatDelegate(mockAssistant, mockTelegramBot);
+        SQSChatDelegate delegate = new SQSChatDelegate(mockAssistant, telegramRepo, sqs, "someurl");
 
         // Create the input data
         Context mockContext = mock(Context.class);
@@ -103,8 +102,8 @@ class SQSChatDelegateTest {
         sqsChatDelegate.processChat(chatId, msgs);
 
         // Assert
-        verify(telegramBot).execute(any(SendChatAction.class)); // Verify that typing was sent
-        verify(telegramBot).execute(any(SendMessage.class)); // Verify that the correct message was sent
+        verify(telegramRepo).sendTyping(chatId); // Verify that typing was sent
+        verify(sqs).sendMessage(any()); // Verify that the correct message was sent
     }
 
     @Test
@@ -122,17 +121,16 @@ class SQSChatDelegateTest {
         sqsChatDelegate.processChat(chatId, msgs);
 
         // Assert
-        verify(telegramBot).execute(any(SendMessage.class));
+        verify(sqs).sendMessage(any());
     }
 
     @Test
     public void testProcessMessages() {
         // Mocking dependencies
         Assistant mockAssistant = mock(Assistant.class);
-        TelegramBot mockTelegramBot = mock(TelegramBot.class);
 
         // Create an instance of the class under test
-        SQSChatDelegate delegate = spy(new SQSChatDelegate(mockAssistant, mockTelegramBot));
+        SQSChatDelegate delegate = spy(new SQSChatDelegate(mockAssistant, telegramRepo, sqs, "meh"));
 
         // Prepare the data
         Map<Long, List<String>> messages = new HashMap<>();
@@ -150,7 +148,7 @@ class SQSChatDelegateTest {
     }
 
 
-    private String telegramPayload = "{\n" +
+    private final String telegramPayload = "{\n" +
             "  \"update_id\": 123456789,\n" +
             "  \"message\": {\n" +
             "    \"message_id\": 100,\n" +

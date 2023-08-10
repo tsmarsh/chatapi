@@ -4,13 +4,10 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.pengrad.telegrambot.BotUtils;
-import com.pengrad.telegrambot.TelegramBot;
-import com.pengrad.telegrambot.model.Chat;
 import com.pengrad.telegrambot.model.Update;
-import com.pengrad.telegrambot.model.request.ChatAction;
-import com.pengrad.telegrambot.request.SendChatAction;
-import com.pengrad.telegrambot.request.SendMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -22,9 +19,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.tailoredshapes.stash.Stash.stash;
+
 
 public record SQSChatDelegate(Assistant assistant,
-                              TelegramBot telegramBot) implements RequestHandler<SQSEvent, SQSBatchResponse> {
+                              TelegramRepo trepo, AmazonSQS sqs, String queueUrl) implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
     private static final Logger LOG = LogManager.getLogger(SQSChatHandler.class);
 
@@ -70,32 +69,25 @@ public record SQSChatDelegate(Assistant assistant,
     }
 
     void processChat(Long chatId, List<String> msgs) {
-        sendTyping(chatId);
+        trepo.sendTyping(chatId);
         String message = "that is harder to answer than I was expecting";
+
+
         try {
             message = assistant.answerAsync(msgs, chatId).get(40, TimeUnit.SECONDS);
         } catch (Exception e) {
             LOG.error("Error generating chat response", e);
         } finally {
-            sendMessage(chatId, message);
-        }
-    }
+            try {
+                SendMessageRequest send_msg_request = new SendMessageRequest()
+                        .withQueueUrl(queueUrl)
+                        .withMessageGroupId(chatId.toString())
+                        .withMessageBody(stash("answer", message, "chatId", chatId).toJSONString());
 
-    void sendMessage(Long chatId, String text) {
-        SendMessage message = new SendMessage(chatId, text);
-        try {
-            telegramBot.execute(message);
-        } catch (Exception e) {
-            LOG.error("Failed to send message to Telegram: " + message, e);
-        }
-    }
-
-    void sendTyping(Long chatId) {
-        SendChatAction sendChatAction = new SendChatAction(chatId, ChatAction.typing);
-        try {
-            telegramBot.execute(sendChatAction);
-        } catch (Exception e) {
-            LOG.error("Failed to send typing", e);
+                sqs.sendMessage(send_msg_request);
+            } catch(Exception e){
+                LOG.error("Error putting message on queue", e);
+            }
         }
     }
 }
