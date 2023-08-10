@@ -1,7 +1,6 @@
 package com.tailoredshapes.boobees;
 
 import com.azure.ai.openai.OpenAIClient;
-import com.azure.ai.openai.OpenAIClientBuilder;
 import com.azure.ai.openai.models.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -11,7 +10,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static com.tailoredshapes.underbar.ocho.UnderBar.list;
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
 public class Assistant {

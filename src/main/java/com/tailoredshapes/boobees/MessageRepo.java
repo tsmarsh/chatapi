@@ -87,7 +87,7 @@ public class MessageRepo {
                     PutRequest putRequest = PutRequest.builder().item(itemValues).build();
                     return WriteRequest.builder().putRequest(putRequest).build();
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         BatchWriteItemRequest batchWriteItemRequest = BatchWriteItemRequest.builder()
                 .requestItems(Map.of(tableName, writeRequests))
