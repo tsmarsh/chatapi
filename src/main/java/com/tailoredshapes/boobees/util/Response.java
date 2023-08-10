@@ -1,4 +1,4 @@
-package com.tailoredshapes.boobees;
+package com.tailoredshapes.boobees.util;
 
 import java.util.Map;
 

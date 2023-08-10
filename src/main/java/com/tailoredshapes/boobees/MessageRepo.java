@@ -4,6 +4,7 @@ import com.azure.ai.openai.models.ChatMessage;
 import com.azure.ai.openai.models.ChatRole;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.*;
 
@@ -19,25 +20,6 @@ public class MessageRepo {
     public MessageRepo(String tableName, DynamoDbClient dynamoDb) {
         this.tableName = tableName;
         this.dynamoDb = dynamoDb;
-    }
-
-    public void create(Long chatId, ChatMessage message) {
-        HashMap<String, AttributeValue> messageMap = new HashMap<>();
-        messageMap.put("role", AttributeValue.builder().s(message.getRole().toString()).build());
-        messageMap.put("content", AttributeValue.builder().s(message.getContent()).build());
-
-        HashMap<String, AttributeValue> itemValues = new HashMap<>();
-        itemValues.put("messageId", AttributeValue.builder().s(UUID.randomUUID().toString()).build());
-        itemValues.put("timestamp", AttributeValue.builder().n(String.valueOf(System.currentTimeMillis())).build());
-        itemValues.put("chatId", AttributeValue.builder().n(chatId.toString()).build());
-        itemValues.put("message", AttributeValue.builder().m(messageMap).build());
-
-        PutItemRequest request = PutItemRequest.builder()
-                .tableName(tableName)
-                .item(itemValues)
-                .build();
-
-        dynamoDb.putItem(request);
     }
 
     public List<ChatMessage> findLastN(Long chatId, int n) {
@@ -64,25 +46,11 @@ public class MessageRepo {
         return result;
     }
 
-    private ChatMessage convertToChatMessage(Map<String, AttributeValue> messageMap) {
-        var cm = new ChatMessage(ChatRole.fromString(messageMap.get("role").s()));
-        cm.setContent( messageMap.get("content").s());
-        return cm;
-    }
-
 
     public void createAll(Long chatId, List<ChatMessage> chatPrompts) {
         List<WriteRequest> writeRequests = chatPrompts.stream()
                 .map(chatMessage -> {
-                    HashMap<String, AttributeValue> messageMap = new HashMap<>();
-                    messageMap.put("role", AttributeValue.builder().s(chatMessage.getRole().toString()).build());
-                    messageMap.put("content", AttributeValue.builder().s(chatMessage.getContent()).build());
-
-                    HashMap<String, AttributeValue> itemValues = new HashMap<>();
-                    itemValues.put("messageId", AttributeValue.builder().s(UUID.randomUUID().toString()).build());
-                    itemValues.put("timestamp", AttributeValue.builder().n(String.valueOf(System.currentTimeMillis())).build());
-                    itemValues.put("chatId", AttributeValue.builder().n(chatId.toString()).build());
-                    itemValues.put("message", AttributeValue.builder().m(messageMap).build());
+                    HashMap<String, AttributeValue> itemValues = messageToItem(chatId, chatMessage);
 
                     PutRequest putRequest = PutRequest.builder().item(itemValues).build();
                     return WriteRequest.builder().putRequest(putRequest).build();
@@ -100,4 +68,23 @@ public class MessageRepo {
         }
     }
 
+    @NotNull
+    static HashMap<String, AttributeValue> messageToItem(Long chatId, ChatMessage chatMessage) {
+        HashMap<String, AttributeValue> messageMap = new HashMap<>();
+        messageMap.put("role", AttributeValue.builder().s(chatMessage.getRole().toString()).build());
+        messageMap.put("content", AttributeValue.builder().s(chatMessage.getContent()).build());
+
+        HashMap<String, AttributeValue> itemValues = new HashMap<>();
+        itemValues.put("messageId", AttributeValue.builder().s(UUID.randomUUID().toString()).build());
+        itemValues.put("timestamp", AttributeValue.builder().n(String.valueOf(System.currentTimeMillis())).build());
+        itemValues.put("chatId", AttributeValue.builder().n(chatId.toString()).build());
+        itemValues.put("message", AttributeValue.builder().m(messageMap).build());
+        return itemValues;
+    }
+
+    ChatMessage convertToChatMessage(Map<String, AttributeValue> messageMap) {
+        var cm = new ChatMessage(ChatRole.fromString(messageMap.get("role").s()));
+        cm.setContent( messageMap.get("content").s());
+        return cm;
+    }
 }
