@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -20,16 +21,11 @@ public class Assistant {
 
     private final ChatMessage systemPrompt;
     public final String failMessage;
+    private MessageRepo repo;
 
-    public Assistant(String openApiKey, String personality, String failMessage) {
-        LOG.info("Initializing Assistant with key: " + openApiKey);
-
-        try {
-            this.openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openApiKey)).buildClient();
-        }catch (Exception e){
-            LOG.fatal("Cannot create OpenAI client", e);
-            throw e;
-        }
+    public Assistant(OpenAIClient openAIClient, String personality, String failMessage, MessageRepo repo) {
+        this.repo = repo;
+        this.openAIClient = openAIClient;
 
         this.systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
         this.failMessage = failMessage;
@@ -39,19 +35,32 @@ public class Assistant {
         List<ChatMessage> aiPrompts = new ArrayList<>();
         aiPrompts.add(systemPrompt);
 
-        aiPrompts.addAll(map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m)));
+        List<ChatMessage> lastN = repo.findLastN(chatId, 10);
+
+        Collections.reverse(lastN);
+
+        List<ChatMessage> chatPrompts = map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m));
+        aiPrompts.addAll(chatPrompts);
+        aiPrompts.addAll(lastN);
 
         ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);
         chatCompletionsOptions.setMaxTokens(200);
 
         String message = failMessage;
+        ChatMessage answer;
+
 
         try {
             ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
-            message = chatCompletions.getChoices().get(0).getMessage().getContent();
+            answer = chatCompletions.getChoices().get(0).getMessage();
+            message = answer.getContent();
+
+            chatPrompts.add(answer);
+            repo.createAll(chatId, chatPrompts);
         }catch (Exception e){
             LOG.error("OpenAI is screwing around again", e);
         }
+
 
         return message;
     }

@@ -14,10 +14,6 @@ provider:
       statements:
         - Effect: Allow
           Action:
-            - dynamodb:PutItem
-            - dynamodb:GetItem
-            - dynamodb:Query
-            - dynamodb:BatchWriteItem
             - sqs:SendMessage
             - sqs:ReceiveMessage
             - sqs:DeleteMessage
@@ -26,6 +22,17 @@ provider:
             - Fn::GetAtt:
                 - UserChatQueue
                 - Arn
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:Query
+            - dynamodb:BatchWriteItem
+          Resource:
+            - Fn::GetAtt:
+                - ChatHistoryTable
+                - Arn
+
 
 package:
   artifact: target/boobees-dev.jar
@@ -57,6 +64,7 @@ functions:
       OPENAI_API_KEY: ${self:custom.secrets.OPENAI_API_KEY}
       TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
       SYSTEM_PROMPT: ${self:custom.env.SYSTEM_PROMPT}
+      TABLE_NAME: ${self:resources.Resources.ChatHistoryTable.Properties.TableName}
 
 resources:
   Resources:
@@ -65,7 +73,39 @@ resources:
         QueueName: boobees-chat-queue-${opt:stage, self:provider.stage}.fifo
         FifoQueue: true
         ContentBasedDeduplication: true
+        VisibilityTimeout: 55
       Type: "AWS::SQS::Queue"
+    ChatHistoryTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: boobees-chat-history-${opt:stage, self:provider.stage}
+        AttributeDefinitions:
+          - AttributeName: messageId
+            AttributeType: S
+          - AttributeName: timestamp
+            AttributeType: N
+          - AttributeName: chatId
+            AttributeType: N
+        KeySchema:
+          - AttributeName: messageId
+            KeyType: HASH
+          - AttributeName: timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: ConversationIndex
+            KeySchema:
+              - AttributeName: chatId
+                KeyType: HASH
+              - AttributeName: timestamp
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
 
 custom:
   secrets: ${file(secrets.${opt:stage, self:provider.stage}.yml)}
