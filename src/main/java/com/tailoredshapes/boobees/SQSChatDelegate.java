@@ -40,8 +40,9 @@ public record SQSChatDelegate(Assistant assistant,
         Map<Long, List<Update>> collect = event.getRecords().stream()
                 .map(this::parseUpdate)
                 .collect(
-                        Collectors.groupingBy((Update u) -> u.message().chat().id()));
+                        Collectors.groupingBy((Update u) -> u != null ? u.message().chat().id() : 0L));
 
+        collect.remove(0L);
         Map<Long, List<String>> result = new HashMap<>();
         collect.forEach((ci, updates) -> result.put(ci, updates.stream().map(u -> u.message().text()).toList()));
 
@@ -54,7 +55,7 @@ public record SQSChatDelegate(Assistant assistant,
         } catch (Exception e) {
             LOG.error("Failed to parse telegram message", e);
             LOG.error("message: " + msg.getBody());
-            return null; // or handle it according to your application's needs
+            return null;
         }
     }
 
