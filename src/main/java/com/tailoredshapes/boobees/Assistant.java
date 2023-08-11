@@ -1,7 +1,10 @@
 package com.tailoredshapes.boobees;
 
 import com.azure.ai.openai.OpenAIClient;
-import com.azure.ai.openai.models.*;
+import com.azure.ai.openai.models.ChatCompletions;
+import com.azure.ai.openai.models.ChatCompletionsOptions;
+import com.azure.ai.openai.models.ChatMessage;
+import com.azure.ai.openai.models.ChatRole;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -26,6 +29,8 @@ public class Assistant {
         this.openAIClient = openAIClient;
 
         this.systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
+
+        LOG.info("Using personality: %s".formatted(systemPrompt.getContent()));
         this.failMessage = failMessage;
     }
 
@@ -33,9 +38,11 @@ public class Assistant {
         List<ChatMessage> aiPrompts = new ArrayList<>();
         aiPrompts.add(systemPrompt);
 
-        List<ChatMessage> lastN = repo.findLastN(chatId, 10);
+        List<ChatMessage> lastN = repo.findLastN(chatId, 30);
 
         Collections.reverse(lastN);
+
+        LOG.info("Found %d items for context".formatted(lastN.size()));
 
         List<ChatMessage> chatPrompts = map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m));
         aiPrompts.addAll(chatPrompts);
@@ -45,25 +52,22 @@ public class Assistant {
         chatCompletionsOptions.setMaxTokens(200);
 
         String message = failMessage;
-        ChatMessage answer;
-
 
         try {
             ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
-            answer = chatCompletions.getChoices().get(0).getMessage();
+            ChatMessage answer = chatCompletions.getChoices().get(0).getMessage();
             message = answer.getContent();
 
             chatPrompts.add(answer);
             repo.createAll(chatId, chatPrompts);
-        }catch (Exception e){
+        } catch (Exception e) {
             LOG.error("OpenAI is screwing around again", e);
         }
-
 
         return message;
     }
 
-    public CompletableFuture<String> answerAsync(List<String> prompts, Long chatId){
-        return CompletableFuture.supplyAsync(() -> answer(prompts,chatId));
+    public CompletableFuture<String> answerAsync(List<String> prompts, Long chatId) {
+        return CompletableFuture.supplyAsync(() -> answer(prompts, chatId));
     }
 }

@@ -27,7 +27,6 @@ public class WebhookHandler implements RequestHandler<Map<String, Object>, ApiGa
 
 	public WebhookHandler(){
 		queueUrl = System.getenv("QUEUE_URL");
-		LOG.info("QUEUE_URL: " + queueUrl);
 		sqs = AmazonSQSClientBuilder.defaultClient();
 	}
 

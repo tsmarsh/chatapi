@@ -6,6 +6,8 @@ import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.model.Update;
 import org.apache.logging.log4j.LogManager;
@@ -18,8 +20,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
-import static com.tailoredshapes.stash.Stash.stash;
 
 
 public record SQSChatDelegate(Assistant assistant,
@@ -72,17 +72,23 @@ public record SQSChatDelegate(Assistant assistant,
         trepo.sendTyping(chatId);
         String message = "that is harder to answer than I was expecting";
 
-
         try {
             message = assistant.answerAsync(msgs, chatId).get(40, TimeUnit.SECONDS);
+
         } catch (Exception e) {
             LOG.error("Error generating chat response", e);
         } finally {
             try {
+                ObjectMapper jsonMapper = new ObjectMapper();
+                ObjectNode root = jsonMapper.createObjectNode();
+                root.put("answer", message);
+                root.put("chatId", chatId);
+                var payload = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+
                 SendMessageRequest send_msg_request = new SendMessageRequest()
                         .withQueueUrl(queueUrl)
                         .withMessageGroupId(chatId.toString())
-                        .withMessageBody(stash("answer", message, "chatId", chatId).toJSONString());
+                        .withMessageBody(payload);
 
                 sqs.sendMessage(send_msg_request);
             } catch(Exception e){

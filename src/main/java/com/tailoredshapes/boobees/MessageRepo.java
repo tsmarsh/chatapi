@@ -2,6 +2,8 @@ package com.tailoredshapes.boobees;
 
 import com.azure.ai.openai.models.ChatMessage;
 import com.azure.ai.openai.models.ChatRole;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -85,6 +87,10 @@ public class MessageRepo {
     ChatMessage convertToChatMessage(Map<String, AttributeValue> messageMap) {
         var cm = new ChatMessage(ChatRole.fromString(messageMap.get("role").s()));
         cm.setContent( messageMap.get("content").s());
+
+        try {
+            LOG.info("Returning: %s}".formatted(new ObjectMapper().writeValueAsString(cm)));
+        } catch (JsonProcessingException ignored) {}
         return cm;
     }
 }

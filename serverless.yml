@@ -9,9 +9,17 @@ provider:
   runtime: java17
   region: us-east-1
   stage: dev
+  tracing:
+    apiGateway: true
+    lambda: true
   iam:
     role:
       statements:
+        - Effect: "Allow"
+          Action:
+            - "xray:PutTraceSegments"
+            - "xray:PutTelemetryRecords"
+          Resource: "*"
         - Effect: Allow
           Action:
             - sqs:SendMessage
@@ -21,6 +29,9 @@ provider:
           Resource:
             - Fn::GetAtt:
                 - UserChatQueue
+                - Arn
+            - Fn::GetAtt:
+                - AnswerQueue
                 - Arn
         - Effect: Allow
           Action:
@@ -32,6 +43,12 @@ provider:
             - Fn::GetAtt:
                 - ChatHistoryTable
                 - Arn
+            - Fn::Sub:
+                - "${ChatHistoryTableArn}/*"
+                - ChatHistoryTableArn:
+                    Fn::GetAtt:
+                      - ChatHistoryTable
+                      - Arn
 
 
 package:
@@ -50,18 +67,6 @@ functions:
       QUEUE_URL:
         Ref: UserChatQueue
 
-  answer:
-    handler: com.tailoredshapes.boobees.SQSTextHandler
-    events:
-      - sqs:
-          arn:
-            Fn::GetAtt:
-              - AnswerQueue
-              - Arn
-          batchSize: 10
-    environment:
-      TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
-
   sqshandler:
     handler: com.tailoredshapes.boobees.SQSChatHandler
     timeout: 45
@@ -79,6 +84,18 @@ functions:
       TABLE_NAME: ${self:resources.Resources.ChatHistoryTable.Properties.TableName}
       QUEUE_URL:
         Ref: AnswerQueue
+
+  answer:
+    handler: com.tailoredshapes.boobees.SQSTextHandler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - AnswerQueue
+              - Arn
+          batchSize: 10
+    environment:
+      TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
 
 resources:
   Resources:
@@ -135,4 +152,3 @@ custom:
 plugins:
   - serverless-offline
   - serverless-secrets-plugin
-  - serverless-sam
