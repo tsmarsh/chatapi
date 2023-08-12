@@ -8,7 +8,6 @@ provider:
   name: aws
   runtime: java17
   region: us-east-1
-  stage: dev
   tracing:
     apiGateway: true
     lambda: true
@@ -146,8 +145,8 @@ resources:
               WriteCapacityUnits: 1
 
 custom:
-  secrets: ${file(secrets.${opt:stage, self:provider.stage}.yml)}
-  env: ${file(config.${opt:stage, self:provider.stage}.yml)}
+  secrets: ${file(secrets.${opt:stage}.yml)}
+  env: ${file(config.${opt:stage}.yml)}
 
 plugins:
   - serverless-offline

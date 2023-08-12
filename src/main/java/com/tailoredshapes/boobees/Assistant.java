@@ -55,7 +55,7 @@ public class Assistant {
         aiPrompts.addAll(chatPrompts);
 
         ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);
-        chatCompletionsOptions.setMaxTokens(200);
+    //        chatCompletionsOptions.setMaxTokens(200);
 
         String message = failMessage;
 
