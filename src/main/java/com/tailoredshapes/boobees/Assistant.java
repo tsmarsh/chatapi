@@ -1,5 +1,7 @@
 package com.tailoredshapes.boobees;
 
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.AWSXRayRecorderBuilder;
 import com.azure.ai.openai.OpenAIClient;
 import com.azure.ai.openai.models.ChatCompletions;
 import com.azure.ai.openai.models.ChatCompletionsOptions;
@@ -16,6 +18,10 @@ import java.util.concurrent.CompletableFuture;
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
 public class Assistant {
+    static {
+        AWSXRayRecorderBuilder builder = AWSXRayRecorderBuilder.standard();
+        AWSXRay.setGlobalRecorder(builder.build());
+    }
 
     private static final Logger LOG = LogManager.getLogger(Assistant.class);
     private final OpenAIClient openAIClient;
@@ -45,23 +51,27 @@ public class Assistant {
         LOG.info("Found %d items for context".formatted(lastN.size()));
 
         List<ChatMessage> chatPrompts = map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m));
-        aiPrompts.addAll(chatPrompts);
         aiPrompts.addAll(lastN);
+        aiPrompts.addAll(chatPrompts);
 
         ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);
         chatCompletionsOptions.setMaxTokens(200);
 
         String message = failMessage;
 
-        try {
-            ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
-            ChatMessage answer = chatCompletions.getChoices().get(0).getMessage();
-            message = answer.getContent();
+        try(var ss = AWSXRay.beginSubsegment("Calling OpenAI")){
+            try {
+                ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
+                ChatMessage answer = chatCompletions.getChoices().get(0).getMessage();
+                message = answer.getContent();
 
-            chatPrompts.add(answer);
-            repo.createAll(chatId, chatPrompts);
-        } catch (Exception e) {
-            LOG.error("OpenAI is screwing around again", e);
+                chatPrompts.add(answer);
+                repo.createAll(chatId, chatPrompts);
+            } catch (Exception e) {
+                LOG.error("OpenAI is screwing around again", e);
+                ss.addException(e);
+            }
+
         }
 
         return message;

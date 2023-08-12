@@ -2,9 +2,8 @@ package com.tailoredshapes.boobees;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
-import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.interceptors.TracingInterceptor;
 import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.Chat;
@@ -13,21 +12,31 @@ import com.tailoredshapes.boobees.util.ApiGatewayResponse;
 import com.tailoredshapes.boobees.util.Response;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.Map;
 
+import com.amazonaws.xray.AWSXRayRecorderBuilder;
 
 public class WebhookHandler implements RequestHandler<Map<String, Object>, ApiGatewayResponse> {
 
+	static {
+		AWSXRayRecorderBuilder builder = AWSXRayRecorderBuilder.standard();
+		AWSXRay.setGlobalRecorder(builder.build());
+	}
+
 	private static final Logger LOG = LogManager.getLogger(WebhookHandler.class);
-	private static final TelegramBot TELEGRAM_BOT = new TelegramBot(System.getenv("TELEGRAM_BOT_TOKEN"));
 
 	private final String queueUrl;
-	private final AmazonSQS sqs;
+	private final SqsClient sqs;
 
 	public WebhookHandler(){
 		queueUrl = System.getenv("QUEUE_URL");
-		sqs = AmazonSQSClientBuilder.defaultClient();
+		sqs = SqsClient.builder()
+				.overrideConfiguration(ClientOverrideConfiguration.builder().addExecutionInterceptor(new TracingInterceptor()).build())
+				.build();
 	}
 
 	public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
@@ -39,10 +48,11 @@ public class WebhookHandler implements RequestHandler<Map<String, Object>, ApiGa
 		LOG.trace(String.format("Processing: %s for %d", text, chat.id()));
 
 		try {
-			SendMessageRequest send_msg_request = new SendMessageRequest()
-					.withQueueUrl(queueUrl)
-					.withMessageGroupId(chat.id().toString())
-					.withMessageBody(body);
+			SendMessageRequest send_msg_request = SendMessageRequest.builder()
+					.queueUrl(queueUrl)
+					.messageGroupId(chat.id().toString())
+					.messageBody(body)
+					.build();
 
 			sqs.sendMessage(send_msg_request);
 		} catch(Exception e){

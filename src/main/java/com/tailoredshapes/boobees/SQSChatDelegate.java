@@ -4,14 +4,14 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.model.Update;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 
 public record SQSChatDelegate(Assistant assistant,
-                              TelegramRepo trepo, AmazonSQS sqs, String queueUrl) implements RequestHandler<SQSEvent, SQSBatchResponse> {
+                              TelegramRepo trepo, SqsClient sqs, String queueUrl) implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
     private static final Logger LOG = LogManager.getLogger(SQSChatHandler.class);
 
@@ -43,6 +43,7 @@ public record SQSChatDelegate(Assistant assistant,
 
         collect.remove(0L);
         Map<Long, List<String>> result = new HashMap<>();
+
         collect.forEach((ci, updates) -> result.put(ci, updates.stream().map(u -> u.message().text()).toList()));
 
         return result;
@@ -74,7 +75,7 @@ public record SQSChatDelegate(Assistant assistant,
 
         try {
             message = assistant.answerAsync(msgs, chatId).get(40, TimeUnit.SECONDS);
-
+            LOG.debug("Message: %s".formatted(message));
         } catch (Exception e) {
             LOG.error("Error generating chat response", e);
         } finally {
@@ -85,10 +86,11 @@ public record SQSChatDelegate(Assistant assistant,
                 root.put("chatId", chatId);
                 var payload = jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
 
-                SendMessageRequest send_msg_request = new SendMessageRequest()
-                        .withQueueUrl(queueUrl)
-                        .withMessageGroupId(chatId.toString())
-                        .withMessageBody(payload);
+
+                SendMessageRequest send_msg_request = SendMessageRequest.builder()
+                        .queueUrl(queueUrl)
+                        .messageGroupId(chatId.toString())
+                        .messageBody(payload).build();
 
                 sqs.sendMessage(send_msg_request);
             } catch(Exception e){

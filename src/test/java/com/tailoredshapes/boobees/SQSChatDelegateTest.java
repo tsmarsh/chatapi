@@ -3,9 +3,10 @@ package com.tailoredshapes.boobees;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import com.amazonaws.services.sqs.AmazonSQS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,13 +24,13 @@ class SQSChatDelegateTest {
     private TelegramRepo telegramRepo;
     private SQSChatDelegate sqsChatDelegate;
 
-    private AmazonSQS sqs;
+    private SqsClient sqs;
 
     @BeforeEach
     void setUp() {
         assistant = mock(Assistant.class);
         telegramRepo = mock(TelegramRepo.class);
-        sqs = mock(AmazonSQS.class);
+        sqs = mock(SqsClient.class);
         sqsChatDelegate = new SQSChatDelegate(assistant, telegramRepo, sqs, "https://not.real/url");
     }
 
@@ -103,7 +104,7 @@ class SQSChatDelegateTest {
 
         // Assert
         verify(telegramRepo).sendTyping(chatId); // Verify that typing was sent
-        verify(sqs).sendMessage(any()); // Verify that the correct message was sent
+        verify(sqs).sendMessage(any(SendMessageRequest.class)); // Verify that the correct message was sent
     }
 
     @Test
@@ -121,7 +122,7 @@ class SQSChatDelegateTest {
         sqsChatDelegate.processChat(chatId, msgs);
 
         // Assert
-        verify(sqs).sendMessage(any());
+        verify(sqs).sendMessage(any(SendMessageRequest.class));
     }
 
     @Test
