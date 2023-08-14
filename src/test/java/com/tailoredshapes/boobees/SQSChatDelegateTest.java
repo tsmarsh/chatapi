@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,9 +64,6 @@ class SQSChatDelegateTest {
 
         when(sqsEvent.getRecords()).thenReturn(List.of(sqsMessage));
         when(sqsMessage.getBody()).thenReturn(telegramPayload);
-
-        Map<Long, List<String>> messages = new HashMap<>();
-        List<SQSBatchResponse.BatchItemFailure> failures = new ArrayList<>();
 
         SQSBatchResponse response = delegate.handleRequest(sqsEvent, mockContext);
 

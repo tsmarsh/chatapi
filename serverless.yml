@@ -99,6 +99,7 @@ functions:
           batchSize: 10
     environment:
       TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
+      AWS_XRAY_DEBUG_MODE: ${self:custom.env.AWS_XRAY_DEBUG_MODE}
 
 resources:
   Resources:

@@ -74,15 +74,21 @@ public class TelegramRepo {
     }
 
 
-    public void sendAudioMessage(Long chatId, InputStream audioStream) {
+    public boolean sendAudioMessage(Long chatId, InputStream audioStream) {
         try(var ss = AWSXRay.beginSubsegment("Send Audio")){
             try{
                 var sendit = new SendVoice(chatId, audioStream.readAllBytes());
                 telegramBot.execute(sendit);
+                return true;
             } catch (Exception e){
                 LOG.error("Failed to send audio message");
                 ss.addException(e);
+                return false;
             }
         }
+    }
+
+    public CompletableFuture<Boolean> sendAudiMessageAsync(Long chatId, InputStream message){
+        return CompletableFuture.supplyAsync(() -> sendAudioMessage(chatId, message));
     }
 }
