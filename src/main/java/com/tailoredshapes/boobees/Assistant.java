@@ -26,23 +26,20 @@ public class Assistant {
     private static final Logger LOG = LogManager.getLogger(Assistant.class);
     private final OpenAIClient openAIClient;
 
-    private final ChatMessage systemPrompt;
     public final String failMessage;
     private final MessageRepo repo;
 
-    public Assistant(OpenAIClient openAIClient, String personality, String failMessage, MessageRepo repo) {
+    public Assistant(OpenAIClient openAIClient, String failMessage, MessageRepo repo) {
         this.repo = repo;
         this.openAIClient = openAIClient;
 
-        this.systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(personality);
-
-        LOG.info("Using personality: %s".formatted(systemPrompt.getContent()));
         this.failMessage = failMessage;
     }
 
     public String answer(List<String> prompts, Long chatId) {
-        List<ChatMessage> aiPrompts = new ArrayList<>();
-        aiPrompts.add(systemPrompt);
+
+        var systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(System.getenv("SYSTEM_PROMPT"));
+        LOG.info("Using personality: %s".formatted(systemPrompt));
 
         List<ChatMessage> lastN = repo.findLastN(chatId, 30);
 
@@ -51,7 +48,9 @@ public class Assistant {
         LOG.info("Found %d items for context".formatted(lastN.size()));
 
         List<ChatMessage> chatPrompts = map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m));
-        aiPrompts.addAll(lastN);
+
+        List<ChatMessage> aiPrompts = new ArrayList<>(lastN);
+        aiPrompts.add(systemPrompt);
         aiPrompts.addAll(chatPrompts);
 
         ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);

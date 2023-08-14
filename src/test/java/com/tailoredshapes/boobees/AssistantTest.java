@@ -27,7 +27,7 @@ class AssistantTest {
 
         String personality = "Friendly Assistant";
         String failMessage = "Sorry, I couldn't understand that.";
-        assistant = new Assistant(openAIClient, personality, failMessage, messageRepo);
+        assistant = new Assistant(openAIClient, failMessage, messageRepo);
     }
 
     @Test

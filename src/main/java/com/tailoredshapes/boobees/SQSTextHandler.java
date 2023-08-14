@@ -4,15 +4,17 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-
+import com.amazonaws.services.polly.AmazonPolly;
+import com.amazonaws.services.polly.AmazonPollyClientBuilder;
+import com.amazonaws.services.polly.model.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
@@ -23,9 +25,11 @@ public class SQSTextHandler implements RequestHandler<SQSEvent, SQSBatchResponse
     private static final Logger LOG = LogManager.getLogger(SQSTextHandler.class);
 
     private static TelegramRepo telegramRepo;
+    private final AmazonPolly amazonPolly;
 
     public SQSTextHandler() {
         telegramRepo = new TelegramRepo(System.getenv("TELEGRAM_BOT_TOKEN"));
+        amazonPolly = AmazonPollyClientBuilder.defaultClient();
     }
 
 
@@ -42,8 +46,27 @@ public class SQSTextHandler implements RequestHandler<SQSEvent, SQSBatchResponse
                 Long chatId = root.get("chatId").asLong();
                 String answer = root.get("answer").asText();
 
-                return telegramRepo.sendMessageAsync(chatId, answer);
-            }catch (Exception e) {
+                if(new Random().nextBoolean()){
+                    telegramRepo.sendRecording(chatId);
+
+                    SynthesizeSpeechRequest synthesizeSpeechRequest = new SynthesizeSpeechRequest()
+                            .withEngine(Engine.Neural)
+                            .withOutputFormat(OutputFormat.Mp3)
+                            .withVoiceId(VoiceId.Vicki)
+                            .withText(answer)
+                            .withTextType(TextType.Text);
+                    SynthesizeSpeechResult synthesizeSpeechResult = amazonPolly.synthesizeSpeech(synthesizeSpeechRequest);
+
+                    telegramRepo.sendAudioMessage(chatId, synthesizeSpeechResult.getAudioStream());
+
+                } else {
+                    return telegramRepo.sendMessageAsync(chatId, answer);
+                }
+
+
+
+
+            } catch (Exception e) {
                 LOG.error("Can't process payload", e);
             }
             var fail = new CompletableFuture<Boolean>();

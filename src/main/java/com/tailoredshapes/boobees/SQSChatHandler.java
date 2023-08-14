@@ -42,7 +42,7 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
         var repo = new MessageRepo(System.getenv("TABLE_NAME"), dynamoDb);
         try {
             var openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openaiApiKey)).buildClient();
-            var assistant = new Assistant(openAIClient, systemPrompt, "brb", repo);
+            var assistant = new Assistant(openAIClient, "brb", repo);
             sqsChatDelegate = new SQSChatDelegate(assistant, new TelegramRepo(System.getenv("TELEGRAM_BOT_TOKEN")), sqs, queueUrl);
         } catch (Exception e) {
             LOG.fatal("Cannot create OpenAI client", e);

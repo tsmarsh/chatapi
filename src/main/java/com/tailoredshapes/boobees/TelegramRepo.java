@@ -4,11 +4,14 @@ import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.AWSXRayRecorderBuilder;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.request.ChatAction;
+import com.pengrad.telegrambot.request.SendAudio;
 import com.pengrad.telegrambot.request.SendChatAction;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.request.SendVoice;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 
 public class TelegramRepo {
@@ -55,5 +58,31 @@ public class TelegramRepo {
             }
         }
 
+    }
+
+    void sendRecording(Long chatId) {
+        SendChatAction sendChatAction = new SendChatAction(chatId, ChatAction.record_voice);
+        try(var ss = AWSXRay.beginSubsegment("Send Telegram Typing")){
+            try {
+                telegramBot.execute(sendChatAction);
+            } catch (Exception e) {
+                LOG.error("Failed to send typing", e);
+                ss.addException(e);
+            }
+        }
+
+    }
+
+
+    public void sendAudioMessage(Long chatId, InputStream audioStream) {
+        try(var ss = AWSXRay.beginSubsegment("Send Audio")){
+            try{
+                var sendit = new SendVoice(chatId, audioStream.readAllBytes());
+                telegramBot.execute(sendit);
+            } catch (Exception e){
+                LOG.error("Failed to send audio message");
+                ss.addException(e);
+            }
+        }
     }
 }

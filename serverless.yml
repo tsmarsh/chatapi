@@ -48,6 +48,10 @@ provider:
                     Fn::GetAtt:
                       - ChatHistoryTable
                       - Arn
+        - Effect: Allow
+          Action:
+            - polly:SynthesizeSpeech
+          Resource: "*"
 
 
 package:
