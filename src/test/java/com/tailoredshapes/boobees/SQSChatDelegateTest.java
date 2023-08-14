@@ -21,7 +21,6 @@ import static org.mockito.Mockito.*;
 class SQSChatDelegateTest {
 
     private Assistant assistant;
-    private TelegramRepo telegramRepo;
     private SQSChatDelegate sqsChatDelegate;
 
     private SqsClient sqs;
@@ -29,9 +28,8 @@ class SQSChatDelegateTest {
     @BeforeEach
     void setUp() {
         assistant = mock(Assistant.class);
-        telegramRepo = mock(TelegramRepo.class);
         sqs = mock(SqsClient.class);
-        sqsChatDelegate = new SQSChatDelegate(assistant, telegramRepo, sqs, "https://not.real/url");
+        sqsChatDelegate = new SQSChatDelegate(assistant, sqs, "https://not.real/url");
     }
 
     @Test
@@ -57,7 +55,7 @@ class SQSChatDelegateTest {
         CompletableFuture<String> futureResponse = CompletableFuture.completedFuture("answer");
         when(mockAssistant.answerAsync(any(), any())).thenReturn(futureResponse);
         // Create an instance of the class under test
-        SQSChatDelegate delegate = new SQSChatDelegate(mockAssistant, telegramRepo, sqs, "someurl");
+        SQSChatDelegate delegate = new SQSChatDelegate(mockAssistant, sqs, "someurl");
 
         // Create the input data
         Context mockContext = mock(Context.class);
@@ -91,23 +89,6 @@ class SQSChatDelegateTest {
     }
 
     @Test
-    void processChatShouldInvokeAssistantAndSendTyping() {
-        // Arrange
-        Long chatId = 123L;
-        List<String> msgs = List.of("question 1", "question 2");
-
-        CompletableFuture<String> futureResponse = CompletableFuture.completedFuture("answer");
-        when(assistant.answerAsync(msgs, chatId)).thenReturn(futureResponse);
-
-        // Act
-        sqsChatDelegate.processChat(chatId, msgs);
-
-        // Assert
-        verify(telegramRepo).sendTyping(chatId); // Verify that typing was sent
-        verify(sqs).sendMessage(any(SendMessageRequest.class)); // Verify that the correct message was sent
-    }
-
-    @Test
     void processChatShouldHandleExceptionFromAssistant() {
         // Arrange
         Long chatId = 123L;
@@ -131,7 +112,7 @@ class SQSChatDelegateTest {
         Assistant mockAssistant = mock(Assistant.class);
 
         // Create an instance of the class under test
-        SQSChatDelegate delegate = spy(new SQSChatDelegate(mockAssistant, telegramRepo, sqs, "meh"));
+        SQSChatDelegate delegate = spy(new SQSChatDelegate(mockAssistant, sqs, "meh"));
 
         // Prepare the data
         Map<Long, List<String>> messages = new HashMap<>();

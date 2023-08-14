@@ -22,8 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
-public record SQSChatDelegate(Assistant assistant,
-                              TelegramRepo trepo, SqsClient sqs, String queueUrl) implements RequestHandler<SQSEvent, SQSBatchResponse> {
+public record SQSChatDelegate(Assistant assistant,SqsClient sqs, String queueUrl) implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
     private static final Logger LOG = LogManager.getLogger(SQSChatHandler.class);
 
@@ -70,7 +69,6 @@ public record SQSChatDelegate(Assistant assistant,
     }
 
     void processChat(Long chatId, List<String> msgs) {
-        trepo.sendTyping(chatId);
         String message = "that is harder to answer than I was expecting";
 
         try {
