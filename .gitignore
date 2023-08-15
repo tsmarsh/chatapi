@@ -41,3 +41,4 @@ secrets.*.yml
 # Serverless Framework specifics
 .serverless/
 /.env.qa
+/config.rengoku.yml
