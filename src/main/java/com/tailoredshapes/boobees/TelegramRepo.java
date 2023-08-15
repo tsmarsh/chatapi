@@ -83,12 +83,12 @@ public class TelegramRepo {
             } catch (Exception e){
                 LOG.error("Failed to send audio message");
                 ss.addException(e);
-                return false;
             }
+            return false;
         }
     }
 
-    public CompletableFuture<Boolean> sendAudiMessageAsync(Long chatId, InputStream message){
-        return CompletableFuture.supplyAsync(() -> sendAudioMessage(chatId, message));
+    public CompletableFuture<Boolean> sendAudioAsync(Long chatId, InputStream audioStream){
+        return CompletableFuture.supplyAsync(() -> sendAudioMessage(chatId, audioStream));
     }
 }

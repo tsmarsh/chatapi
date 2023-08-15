@@ -23,7 +23,6 @@ public class SQSTextHandler implements RequestHandler<SQSEvent, SQSBatchResponse
 
     private static TelegramRepo telegramRepo;
 
-
     public SQSTextHandler() {
         telegramRepo = new TelegramRepo(System.getenv("TELEGRAM_BOT_TOKEN"));
     }
