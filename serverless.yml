@@ -151,7 +151,12 @@ resources:
 custom:
   secrets: ${file(secrets.${opt:stage}.yml)}
   env: ${file(config.${opt:stage}.yml)}
+  scriptHooks:
+    # Run the script after a successful deploy
+    'after:deploy:deploy': ./scripts/update_webhook.sh ./secrets.${opt:stage}.yml
+
 
 plugins:
   - serverless-offline
   - serverless-secrets-plugin
+  - serverless-scriptable-plugin
