@@ -36,7 +36,7 @@ Thumbs.db   # Windows
 
 # Local configuration or secrets
 secrets.*.yml
-.env
+.env*
 
 # Serverless Framework specifics
 .serverless/
