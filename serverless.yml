@@ -89,7 +89,7 @@ functions:
         Ref: AnswerQueue
 
   answer:
-    handler: com.tailoredshapes.boobees.SQSTextHandler
+    handler: com.tailoredshapes.boobees.SQSTextAndAudioHandler
     events:
       - sqs:
           arn:
@@ -99,6 +99,7 @@ functions:
           batchSize: 10
     environment:
       TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
+      VOICE: ${self:custom.env.VOICE}
 
 resources:
   Resources:

@@ -20,14 +20,16 @@ import java.util.concurrent.CompletableFuture;
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
 
-public class SQSTextHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
+public class SQSTextAndAudioHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
-    private static final Logger LOG = LogManager.getLogger(SQSTextHandler.class);
+    private static final Logger LOG = LogManager.getLogger(SQSTextAndAudioHandler.class);
 
     private static TelegramRepo telegramRepo;
+    private final AmazonPolly amazonPolly;
 
-    public SQSTextHandler() {
+    public SQSTextAndAudioHandler() {
         telegramRepo = new TelegramRepo(System.getenv("TELEGRAM_BOT_TOKEN"));
+        amazonPolly = AmazonPollyClientBuilder.defaultClient();
     }
 
 
@@ -44,10 +46,25 @@ public class SQSTextHandler implements RequestHandler<SQSEvent, SQSBatchResponse
                 Long chatId = root.get("chatId").asLong();
                 String answer = root.get("answer").asText();
 
-                return telegramRepo.sendMessageAsync(chatId, answer);
+                telegramRepo.sendRecording(chatId);
+
+                var response =  telegramRepo.sendMessageAsync(chatId, answer);
+                SynthesizeSpeechRequest synthesizeSpeechRequest = new SynthesizeSpeechRequest()
+                        .withEngine(Engine.Neural)
+                        .withOutputFormat(OutputFormat.Mp3)
+                        .withVoiceId(VoiceId.fromValue(System.getenv("VOICE")))
+                        .withText(answer)
+                        .withTextType(TextType.Text);
+                SynthesizeSpeechResult synthesizeSpeechResult = amazonPolly.synthesizeSpeech(synthesizeSpeechRequest);
+
+                telegramRepo.sendAudioAsync(chatId, synthesizeSpeechResult.getAudioStream());
+
+                return response;
+
             } catch (Exception e) {
                 LOG.error("Can't process payload", e);
             }
+
             var fail = new CompletableFuture<Boolean>();
             fail.complete(false);
             return fail;
