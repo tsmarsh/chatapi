@@ -1,7 +1,5 @@
 package com.tailoredshapes.boobees;
 
-import com.azure.ai.openai.models.ChatMessage;
-import com.azure.ai.openai.models.ChatRole;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
@@ -24,7 +22,7 @@ public class MessageRepo {
         this.dynamoDb = dynamoDb;
     }
 
-    public List<ChatMessage> findLastN(Long chatId, int n) {
+    public List<Prompt> findLastN(Long chatId, int n) {
         QueryRequest request = QueryRequest.builder()
                 .tableName(this.tableName)
                 .indexName("ConversationIndex")
@@ -34,11 +32,11 @@ public class MessageRepo {
                 .scanIndexForward(false)
                 .build();
 
-        List<ChatMessage> result;
+        List<Prompt> result;
         try {
-            var response = this.dynamoDb.query(request);
+            QueryResponse response = this.dynamoDb.query(request);
             result = response.items().stream()
-                    .map(item -> convertToChatMessage(item.get("message").m()))
+                    .map(item -> convertToPrompt(item.get("message").m()))
                     .collect(Collectors.toList());
         } catch (Exception error) {
             LOG.error(String.format("Error querying for chatId %s", chatId), error);
@@ -49,7 +47,8 @@ public class MessageRepo {
     }
 
 
-    public void createAll(Long chatId, List<ChatMessage> chatPrompts) {
+    public void createAll(Long chatId, List<Prompt> chatPrompts) {
+
         List<WriteRequest> writeRequests = chatPrompts.stream()
                 .map(chatMessage -> {
                     HashMap<String, AttributeValue> itemValues = messageToItem(chatId, chatMessage);
@@ -71,10 +70,10 @@ public class MessageRepo {
     }
 
     @NotNull
-    static HashMap<String, AttributeValue> messageToItem(Long chatId, ChatMessage chatMessage) {
+    static HashMap<String, AttributeValue> messageToItem(Long chatId, Prompt prompt) {
         HashMap<String, AttributeValue> messageMap = new HashMap<>();
-        messageMap.put("role", AttributeValue.builder().s(chatMessage.getRole().toString()).build());
-        messageMap.put("content", AttributeValue.builder().s(chatMessage.getContent()).build());
+        messageMap.put("role", AttributeValue.builder().s(prompt.role()).build());
+        messageMap.put("content", AttributeValue.builder().s(prompt.prompt()).build());
 
         HashMap<String, AttributeValue> itemValues = new HashMap<>();
         itemValues.put("messageId", AttributeValue.builder().s(UUID.randomUUID().toString()).build());
@@ -84,9 +83,8 @@ public class MessageRepo {
         return itemValues;
     }
 
-    ChatMessage convertToChatMessage(Map<String, AttributeValue> messageMap) {
-        var cm = new ChatMessage(ChatRole.fromString(messageMap.get("role").s()));
-        cm.setContent( messageMap.get("content").s());
+    Prompt convertToPrompt(Map<String, AttributeValue> messageMap) {
+        var cm = new Prompt(messageMap.get("role").s(), messageMap.get("content").s());
 
         try {
             LOG.info("Returning: %s}".formatted(new ObjectMapper().writeValueAsString(cm)));

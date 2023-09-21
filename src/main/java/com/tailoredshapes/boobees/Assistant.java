@@ -2,13 +2,13 @@ package com.tailoredshapes.boobees;
 
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.AWSXRayRecorderBuilder;
-import com.azure.ai.openai.OpenAIClient;
-import com.azure.ai.openai.models.ChatCompletions;
-import com.azure.ai.openai.models.ChatCompletionsOptions;
-import com.azure.ai.openai.models.ChatMessage;
-import com.azure.ai.openai.models.ChatRole;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.theokanning.openai.completion.chat.ChatCompletionChoice;
+import com.theokanning.openai.completion.chat.ChatCompletionRequest;
+import com.theokanning.openai.completion.chat.ChatMessage;
+import com.theokanning.openai.completion.chat.ChatMessageRole;
+import com.theokanning.openai.service.OpenAiService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,7 +16,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
+import static com.tailoredshapes.underbar.ocho.UnderBar.last;
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
 public class Assistant {
@@ -26,12 +28,12 @@ public class Assistant {
     }
 
     private static final Logger LOG = LogManager.getLogger(Assistant.class);
-    private final OpenAIClient openAIClient;
+    private final OpenAiService openAIClient;
 
     public final String failMessage;
     private final MessageRepo repo;
 
-    public Assistant(OpenAIClient openAIClient, String failMessage, MessageRepo repo) {
+    public Assistant(OpenAiService openAIClient, String failMessage, MessageRepo repo) {
         this.repo = repo;
         this.openAIClient = openAIClient;
 
@@ -40,19 +42,20 @@ public class Assistant {
 
     public String answer(List<String> prompts, Long chatId) {
 
-        var systemPrompt = new ChatMessage(ChatRole.SYSTEM).setContent(System.getenv("SYSTEM_PROMPT"));
-        var formatPrompt = new ChatMessage(ChatRole.SYSTEM).setContent("Please use markdown for formatting and emphasis, feel free to use emoji.");
+        ChatMessage systemPrompt = new ChatMessage(ChatMessageRole.SYSTEM.value(), System.getenv("SYSTEM_PROMPT"));
+        ChatMessage formatPrompt = new ChatMessage(ChatMessageRole.SYSTEM.value(), System.getenv("Please use markdown for formatting and emphasis, feel free to use emoji."));
+
         LOG.info("Using personality: %s".formatted(systemPrompt));
 
-        List<ChatMessage> lastN = repo.findLastN(chatId, 30);
+        List<Prompt> lastN = repo.findLastN(chatId, 30);
 
         Collections.reverse(lastN);
 
         LOG.info("Found %d items for context".formatted(lastN.size()));
 
-        List<ChatMessage> chatPrompts = map(prompts, (m) -> new ChatMessage(ChatRole.USER).setContent(m));
+        List<ChatMessage> chatPrompts = map(prompts, (m) -> new ChatMessage(ChatMessageRole.USER.value(), m));
 
-        List<ChatMessage> aiPrompts = new ArrayList<>(lastN);
+        List<ChatMessage> aiPrompts = lastN.stream().map( (p) -> new ChatMessage(ChatMessageRole.valueOf(p.role()).value(), p.prompt())).collect(Collectors.toList());
         aiPrompts.add(formatPrompt);
         aiPrompts.add(systemPrompt);
         aiPrompts.addAll(chatPrompts);
@@ -63,47 +66,27 @@ public class Assistant {
             LOG.error("Can't display prompts", e);
         }
 
-
-        ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompts);
-    //        chatCompletionsOptions.setMaxTokens(200);
+        ChatCompletionRequest completionRequest = ChatCompletionRequest.builder().model("gpt-3.5-turbo").messages(aiPrompts).build();
 
         String message = failMessage;
 
         try(var ss = AWSXRay.beginSubsegment("Calling OpenAI")){
             try {
-                ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
-                ChatMessage answer = chatCompletions.getChoices().get(0).getMessage();
-                message = answer.getContent();
+                List<ChatCompletionChoice> choices = openAIClient.createChatCompletion(completionRequest).getChoices();
+                if(choices.size() > 0){
+                    ChatMessage answer = choices.get(0).getMessage();
+                    message = answer.getContent();
+                    chatPrompts.add(answer);
+                }
 
-                chatPrompts.add(answer);
-                repo.createAll(chatId, chatPrompts);
+                List<Prompt> ps = chatPrompts.stream().map((cm) -> new Prompt(cm.getRole(), cm.getContent())).toList();
+                repo.createAll(chatId, ps);
+
             } catch (Exception e) {
                 LOG.error("OpenAI is screwing around again", e);
                 ss.addException(e);
             }
 
-        }
-
-        return message;
-    }
-
-    public String quickAnswer(String prompt) {
-        List<ChatMessage> aiPrompt = new ArrayList<>();
-        aiPrompt.add(new ChatMessage(ChatRole.USER).setContent(prompt));
-
-        ChatCompletionsOptions chatCompletionsOptions = new ChatCompletionsOptions(aiPrompt);
-
-        String message = failMessage;
-
-        try(var ss = AWSXRay.beginSubsegment("Calling OpenAI for quick answer")){
-            try {
-                ChatCompletions chatCompletions = openAIClient.getChatCompletions("gpt-3.5-turbo", chatCompletionsOptions);
-                ChatMessage answer = chatCompletions.getChoices().get(0).getMessage();
-                message = answer.getContent();
-            } catch (Exception e) {
-                LOG.error("OpenAI is screwing around again", e);
-                ss.addException(e);
-            }
         }
 
         return message;

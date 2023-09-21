@@ -1,7 +1,6 @@
 package com.tailoredshapes.boobees;
 
-import com.azure.ai.openai.models.ChatMessage;
-import com.azure.ai.openai.models.ChatRole;
+import com.theokanning.openai.completion.chat.ChatMessageRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -40,18 +39,18 @@ class MessageRepoTest {
 
         when(dynamoDbClient.query(any(QueryRequest.class))).thenReturn(response);
 
-        List<ChatMessage> result = messageRepo.findLastN(42L, 2);
+        List<Prompt> result = messageRepo.findLastN(42L, 2);
 
         assertEquals(2, result.size());
-        assertEquals("Hello!", result.get(0).getContent());
-        assertEquals("Hi there!", result.get(1).getContent());
+        assertEquals("Hello!", result.get(0).prompt());
+        assertEquals("Hi there!", result.get(1).prompt());
     }
 
     @Test
     void createAllShouldWriteMessages() {
-        List<ChatMessage> chatPrompts = Arrays.asList(
-                new ChatMessage(ChatRole.USER).setContent("Test user content."),
-                new ChatMessage(ChatRole.ASSISTANT).setContent("Test assistant content.")
+        List<Prompt> chatPrompts = Arrays.asList(
+                new Prompt(ChatMessageRole.USER.value(), "Test user content."),
+                new Prompt(ChatMessageRole.ASSISTANT.value(), "Test assistant content.")
         );
 
         // You may choose to mock the dynamoDbClient method or test that your code behaves appropriately if an exception is thrown

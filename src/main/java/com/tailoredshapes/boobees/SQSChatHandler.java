@@ -7,8 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.AWSXRayRecorderBuilder;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
-import com.azure.ai.openai.OpenAIClientBuilder;
-import com.azure.ai.openai.models.NonAzureOpenAIKeyCredential;
+import com.theokanning.openai.service.OpenAiService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -40,7 +39,7 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
 
         var repo = new MessageRepo(System.getenv("TABLE_NAME"), dynamoDb);
         try {
-            var openAIClient = new OpenAIClientBuilder().credential(new NonAzureOpenAIKeyCredential(openaiApiKey)).buildClient();
+            var openAIClient = new OpenAiService(openaiApiKey);
             var assistant = new Assistant(openAIClient, "brb", repo);
             sqsChatDelegate = new SQSChatDelegate(assistant, sqs, queueUrl);
         } catch (Exception e) {
