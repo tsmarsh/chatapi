@@ -35,9 +35,9 @@ public class Assistant {
     private final OpenAiService openAIClient;
 
     public final String failMessage;
-    private final DynamoMessageRepo repo;
+    private final MessageRepo repo;
 
-    public Assistant(OpenAiService openAIClient, String failMessage, DynamoMessageRepo repo) {
+    public Assistant(OpenAiService openAIClient, String failMessage, MessageRepo repo) {
         this.repo = repo;
         this.openAIClient = openAIClient;
 

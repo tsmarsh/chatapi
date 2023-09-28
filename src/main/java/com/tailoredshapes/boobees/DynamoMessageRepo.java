@@ -11,7 +11,7 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class DynamoMessageRepo {
+public class DynamoMessageRepo implements MessageRepo {
     private final String tableName;
     private final DynamoDbClient dynamoDb;
 
@@ -22,6 +22,7 @@ public class DynamoMessageRepo {
         this.dynamoDb = dynamoDb;
     }
 
+    @Override
     public List<Prompt> findLastN(Long chatId, int n) {
         QueryRequest request = QueryRequest.builder()
                 .tableName(this.tableName)
@@ -47,6 +48,7 @@ public class DynamoMessageRepo {
     }
 
 
+    @Override
     public void createAll(Long chatId, List<Prompt> chatPrompts) {
 
         List<WriteRequest> writeRequests = chatPrompts.stream()

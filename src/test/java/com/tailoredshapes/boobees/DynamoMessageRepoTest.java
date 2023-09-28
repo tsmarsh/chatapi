@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 class DynamoMessageRepoTest {
 
     private DynamoDbClient dynamoDbClient;
-    private DynamoMessageRepo messageRepo;
+    private MessageRepo messageRepo;
 
     @BeforeEach
     void setUp() {

@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
 class AssistantTest {
 
     private OpenAiService openAIClient;
-    private DynamoMessageRepo messageRepo;
+    private MessageRepo messageRepo;
     private Assistant assistant;
 
     @BeforeEach
