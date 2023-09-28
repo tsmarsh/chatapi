@@ -8,20 +8,25 @@ import com.theokanning.openai.completion.chat.ChatCompletionChoice;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatMessage;
 import com.theokanning.openai.completion.chat.ChatMessageRole;
+import com.theokanning.openai.embedding.Embedding;
+import com.theokanning.openai.embedding.EmbeddingRequest;
+import com.theokanning.openai.embedding.EmbeddingResult;
 import com.theokanning.openai.service.OpenAiService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import static com.tailoredshapes.underbar.ocho.UnderBar.last;
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
 public class Assistant {
+
+    public static final String MODEL = "gpt-3.5-turbo";
+
     static {
         AWSXRayRecorderBuilder builder = AWSXRayRecorderBuilder.standard();
         AWSXRay.setGlobalRecorder(builder.build());
@@ -66,7 +71,7 @@ public class Assistant {
             LOG.error("Can't display prompts", e);
         }
 
-        ChatCompletionRequest completionRequest = ChatCompletionRequest.builder().model("gpt-3.5-turbo").messages(aiPrompts).build();
+        ChatCompletionRequest completionRequest = ChatCompletionRequest.builder().model(MODEL).messages(aiPrompts).build();
 
         String message = failMessage;
 
@@ -94,5 +99,13 @@ public class Assistant {
 
     public CompletableFuture<String> answerAsync(List<String> prompts, Long chatId) {
         return CompletableFuture.supplyAsync(() -> answer(prompts, chatId));
+    }
+
+    public List<List<Double>> embed(List<Prompt> prompt) {
+        EmbeddingRequest embeddingRequest = EmbeddingRequest.builder().model(MODEL).input(prompt.stream().map(Prompt::prompt).toList()).build();
+        EmbeddingResult embeddings = openAIClient.createEmbeddings(embeddingRequest);
+        List<Embedding> data = embeddings.getData();
+
+        return data.stream().map(Embedding::getEmbedding).toList();
     }
 }
