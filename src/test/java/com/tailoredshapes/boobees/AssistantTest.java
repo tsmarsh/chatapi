@@ -1,6 +1,5 @@
 package com.tailoredshapes.boobees;
 
-import com.theokanning.openai.client.OpenAiApi;
 import com.theokanning.openai.completion.chat.*;
 import com.theokanning.openai.embedding.Embedding;
 import com.theokanning.openai.embedding.EmbeddingResult;
@@ -23,13 +22,13 @@ import static org.mockito.Mockito.when;
 class AssistantTest {
 
     private OpenAiService openAIClient;
-    private MessageRepo messageRepo;
+    private DynamoMessageRepo messageRepo;
     private Assistant assistant;
 
     @BeforeEach
     void setUp() {
         openAIClient = Mockito.mock(OpenAiService.class);
-        messageRepo = Mockito.mock(MessageRepo.class);
+        messageRepo = Mockito.mock(DynamoMessageRepo.class);
 
         String failMessage = "Sorry, I couldn't understand that.";
         assistant = new Assistant(openAIClient, failMessage, messageRepo);

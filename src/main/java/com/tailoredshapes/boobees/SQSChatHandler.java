@@ -37,7 +37,7 @@ public class SQSChatHandler implements RequestHandler<SQSEvent, SQSBatchResponse
 
         var sqs = SqsClient.builder().overrideConfiguration(ClientOverrideConfiguration.builder().addExecutionInterceptor(new TracingInterceptor()).build()).build();
 
-        var repo = new MessageRepo(System.getenv("TABLE_NAME"), dynamoDb);
+        var repo = new DynamoMessageRepo(System.getenv("TABLE_NAME"), dynamoDb);
         try {
             var openAIClient = new OpenAiService(openaiApiKey);
             var assistant = new Assistant(openAIClient, "brb", repo);

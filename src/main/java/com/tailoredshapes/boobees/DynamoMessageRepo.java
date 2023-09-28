@@ -11,13 +11,13 @@ import software.amazon.awssdk.services.dynamodb.model.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class MessageRepo {
+public class DynamoMessageRepo {
     private final String tableName;
     private final DynamoDbClient dynamoDb;
 
-    private static final Logger LOG = LogManager.getLogger(MessageRepo.class);
+    private static final Logger LOG = LogManager.getLogger(DynamoMessageRepo.class);
 
-    public MessageRepo(String tableName, DynamoDbClient dynamoDb) {
+    public DynamoMessageRepo(String tableName, DynamoDbClient dynamoDb) {
         this.tableName = tableName;
         this.dynamoDb = dynamoDb;
     }

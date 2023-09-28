@@ -15,7 +15,6 @@ import com.theokanning.openai.service.OpenAiService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -36,9 +35,9 @@ public class Assistant {
     private final OpenAiService openAIClient;
 
     public final String failMessage;
-    private final MessageRepo repo;
+    private final DynamoMessageRepo repo;
 
-    public Assistant(OpenAiService openAIClient, String failMessage, MessageRepo repo) {
+    public Assistant(OpenAiService openAIClient, String failMessage, DynamoMessageRepo repo) {
         this.repo = repo;
         this.openAIClient = openAIClient;
 

@@ -17,15 +17,15 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-class MessageRepoTest {
+class DynamoMessageRepoTest {
 
     private DynamoDbClient dynamoDbClient;
-    private MessageRepo messageRepo;
+    private DynamoMessageRepo messageRepo;
 
     @BeforeEach
     void setUp() {
         dynamoDbClient = Mockito.mock(DynamoDbClient.class);
-        messageRepo = new MessageRepo("testTable", dynamoDbClient);
+        messageRepo = new DynamoMessageRepo("testTable", dynamoDbClient);
     }
 
     @Test
