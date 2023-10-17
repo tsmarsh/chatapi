@@ -1,5 +1,8 @@
 package com.tailoredshapes.boobees;
 
+import com.tailoredshapes.boobees.model.Prompt;
+import com.tailoredshapes.boobees.repositories.DynamoMessageRepo;
+import com.tailoredshapes.boobees.repositories.MessageRepo;
 import com.theokanning.openai.completion.chat.ChatMessageRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.tailoredshapes.boobees;
+package com.tailoredshapes.boobees.steps.text;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -7,6 +7,7 @@ import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.xray.AWSXRay;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tailoredshapes.boobees.repositories.TelegramRepo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,17 +17,10 @@ import java.util.concurrent.CompletableFuture;
 
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
+public record SQSTextDelegate(TelegramRepo telegramRepo) implements RequestHandler<SQSEvent, SQSBatchResponse> {
+    private static final Logger LOG = LogManager.getLogger(SQSTextDelegate.class);
 
-public class SQSTextHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
-
-    private static final Logger LOG = LogManager.getLogger(SQSTextHandler.class);
-
-    private static TelegramRepo telegramRepo;
-
-    public SQSTextHandler() {
-        telegramRepo = new TelegramRepo(System.getenv("TELEGRAM_BOT_TOKEN"));
-    }
-
+    @Override
     public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
         List<SQSBatchResponse.BatchItemFailure> batchItemFailures = new ArrayList<>();
 
@@ -58,5 +52,4 @@ public class SQSTextHandler implements RequestHandler<SQSEvent, SQSBatchResponse
         }
         return SQSBatchResponse.builder().withBatchItemFailures(batchItemFailures).build();
     }
-
 }

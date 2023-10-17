@@ -1,10 +1,9 @@
-package com.tailoredshapes.boobees;
+package com.tailoredshapes.boobees.repositories;
 
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.AWSXRayRecorderBuilder;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.model.request.ChatAction;
-import com.pengrad.telegrambot.request.SendAudio;
 import com.pengrad.telegrambot.request.SendChatAction;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.request.SendVoice;
@@ -60,7 +59,7 @@ public class TelegramRepo {
 
     }
 
-    void sendRecording(Long chatId) {
+    public void sendRecording(Long chatId) {
         SendChatAction sendChatAction = new SendChatAction(chatId, ChatAction.record_voice);
         try(var ss = AWSXRay.beginSubsegment("Send Telegram Typing")){
             try {

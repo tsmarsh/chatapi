@@ -1,4 +1,4 @@
-package com.tailoredshapes.boobees;
+package com.tailoredshapes.boobees.steps.answer;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.pengrad.telegrambot.BotUtils;
 import com.pengrad.telegrambot.model.Update;
+import com.tailoredshapes.boobees.repositories.Assistant;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -22,9 +23,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
-public record SQSChatDelegate(Assistant assistant,SqsClient sqs, String queueUrl) implements RequestHandler<SQSEvent, SQSBatchResponse> {
+public record SQSAnswerDelegate(Assistant assistant, SqsClient sqs, String queueUrl) implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
-    private static final Logger LOG = LogManager.getLogger(SQSChatHandler.class);
+    private static final Logger LOG = LogManager.getLogger(SQSAnswerHandler.class);
 
     @Override
     public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
@@ -34,7 +35,7 @@ public record SQSChatDelegate(Assistant assistant,SqsClient sqs, String queueUrl
         return SQSBatchResponse.builder().withBatchItemFailures(fails).build();
     }
 
-    Map<Long, List<String>> extractMessagesFromEvent(SQSEvent event) {
+    public Map<Long, List<String>> extractMessagesFromEvent(SQSEvent event) {
         Map<Long, List<Update>> collect = event.getRecords().stream()
                 .map(this::parseUpdate)
                 .collect(
@@ -59,7 +60,7 @@ public record SQSChatDelegate(Assistant assistant,SqsClient sqs, String queueUrl
     }
 
 
-    List<SQSBatchResponse.BatchItemFailure> processMessages(Map<Long, List<String>> messages) {
+    public List<SQSBatchResponse.BatchItemFailure> processMessages(Map<Long, List<String>> messages) {
         List<SQSBatchResponse.BatchItemFailure> fails = new ArrayList<>();
 
         CompletableFuture.allOf(messages.entrySet().stream()
@@ -68,7 +69,7 @@ public record SQSChatDelegate(Assistant assistant,SqsClient sqs, String queueUrl
         return fails;
     }
 
-    void processChat(Long chatId, List<String> msgs) {
+    public void processChat(Long chatId, List<String> msgs) {
         String message = "that is harder to answer than I was expecting";
 
         try {

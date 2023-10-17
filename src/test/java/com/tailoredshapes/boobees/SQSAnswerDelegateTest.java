@@ -3,6 +3,8 @@ package com.tailoredshapes.boobees;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
+import com.tailoredshapes.boobees.repositories.Assistant;
+import com.tailoredshapes.boobees.steps.answer.SQSAnswerDelegate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.sqs.SqsClient;
@@ -17,10 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class SQSChatDelegateTest {
+class SQSAnswerDelegateTest {
 
     private Assistant assistant;
-    private SQSChatDelegate sqsChatDelegate;
+    private SQSAnswerDelegate sqsAnswerDelegate;
 
     private SqsClient sqs;
 
@@ -28,7 +30,7 @@ class SQSChatDelegateTest {
     void setUp() {
         assistant = mock(Assistant.class);
         sqs = mock(SqsClient.class);
-        sqsChatDelegate = new SQSChatDelegate(assistant, sqs, "https://not.real/url");
+        sqsAnswerDelegate = new SQSAnswerDelegate(assistant, sqs, "https://not.real/url");
     }
 
     @Test
@@ -39,7 +41,7 @@ class SQSChatDelegateTest {
         when(sqsEvent.getRecords()).thenReturn(List.of(sqsMessage));
         when(sqsMessage.getBody()).thenReturn(telegramPayload);
 
-        Map<Long, List<String>> result = sqsChatDelegate.extractMessagesFromEvent(sqsEvent);
+        Map<Long, List<String>> result = sqsAnswerDelegate.extractMessagesFromEvent(sqsEvent);
 
         assertEquals(1, result.size());
         assertEquals(1, result.get(54321L).size());
@@ -54,7 +56,7 @@ class SQSChatDelegateTest {
         CompletableFuture<String> futureResponse = CompletableFuture.completedFuture("answer");
         when(mockAssistant.answerAsync(any(), any())).thenReturn(futureResponse);
         // Create an instance of the class under test
-        SQSChatDelegate delegate = new SQSChatDelegate(mockAssistant, sqs, "someurl");
+        SQSAnswerDelegate delegate = new SQSAnswerDelegate(mockAssistant, sqs, "someurl");
 
         // Create the input data
         Context mockContext = mock(Context.class);
@@ -79,7 +81,7 @@ class SQSChatDelegateTest {
         when(sqsEvent.getRecords()).thenReturn(List.of(sqsMessage));
         when(sqsMessage.getBody()).thenReturn("Not a telegram update");
 
-        Map<Long, List<String>> result = sqsChatDelegate.extractMessagesFromEvent(sqsEvent);
+        Map<Long, List<String>> result = sqsAnswerDelegate.extractMessagesFromEvent(sqsEvent);
 
         assertEquals(0, result.size());
     }
@@ -96,7 +98,7 @@ class SQSChatDelegateTest {
         when(assistant.answerAsync(msgs, chatId)).thenReturn(futureResponse);
 
         // Act
-        sqsChatDelegate.processChat(chatId, msgs);
+        sqsAnswerDelegate.processChat(chatId, msgs);
 
         // Assert
         verify(sqs).sendMessage(any(SendMessageRequest.class));
@@ -108,7 +110,7 @@ class SQSChatDelegateTest {
         Assistant mockAssistant = mock(Assistant.class);
 
         // Create an instance of the class under test
-        SQSChatDelegate delegate = spy(new SQSChatDelegate(mockAssistant, sqs, "meh"));
+        SQSAnswerDelegate delegate = spy(new SQSAnswerDelegate(mockAssistant, sqs, "meh"));
 
         // Prepare the data
         Map<Long, List<String>> messages = new HashMap<>();

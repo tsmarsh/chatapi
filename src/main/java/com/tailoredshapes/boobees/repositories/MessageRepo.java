@@ -1,4 +1,6 @@
-package com.tailoredshapes.boobees;
+package com.tailoredshapes.boobees.repositories;
+
+import com.tailoredshapes.boobees.model.Prompt;
 
 import java.util.List;
 

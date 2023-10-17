@@ -1,9 +1,10 @@
-package com.tailoredshapes.boobees;
+package com.tailoredshapes.boobees.repositories;
 
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.AWSXRayRecorderBuilder;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tailoredshapes.boobees.model.Prompt;
 import com.theokanning.openai.completion.chat.ChatCompletionChoice;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatMessage;
@@ -24,7 +25,7 @@ import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
 public class Assistant {
 
-    public static final String MODEL = "gpt-3.5-turbo";
+    public static final String MODEL = System.getenv("MODEL") != null ? System.getenv("MODEL") : "gpt-3.5-turbo";
 
     static {
         AWSXRayRecorderBuilder builder = AWSXRayRecorderBuilder.standard();
@@ -34,20 +35,24 @@ public class Assistant {
     private static final Logger LOG = LogManager.getLogger(Assistant.class);
     private final OpenAiService openAIClient;
 
+    private final String systemPrompt;
+
     public final String failMessage;
     private final MessageRepo repo;
 
-    public Assistant(OpenAiService openAIClient, String failMessage, MessageRepo repo) {
+    public Assistant(OpenAiService openAIClient, String failMessage, MessageRepo repo, String systemPrompt) {
         this.repo = repo;
         this.openAIClient = openAIClient;
+        this.systemPrompt = systemPrompt;
 
         this.failMessage = failMessage;
+        LOG.info("Using: %s".formatted(MODEL));
     }
 
     public String answer(List<String> prompts, Long chatId) {
 
-        ChatMessage systemPrompt = new ChatMessage(ChatMessageRole.SYSTEM.value(), System.getenv("SYSTEM_PROMPT"));
-        ChatMessage formatPrompt = new ChatMessage(ChatMessageRole.SYSTEM.value(), System.getenv("Please use markdown for formatting and emphasis, feel free to use emoji."));
+        ChatMessage systemPrompt = new ChatMessage(ChatMessageRole.SYSTEM.value(), this.systemPrompt);
+        ChatMessage formatPrompt = new ChatMessage(ChatMessageRole.SYSTEM.value(), "Please use markdown for formatting and emphasis, feel free to use emoji.");
 
         LOG.info("Using personality: %s".formatted(systemPrompt));
 
@@ -59,7 +64,7 @@ public class Assistant {
 
         List<ChatMessage> chatPrompts = map(prompts, (m) -> new ChatMessage(ChatMessageRole.USER.value(), m));
 
-        List<ChatMessage> aiPrompts = lastN.stream().map( (p) -> new ChatMessage(ChatMessageRole.valueOf(p.role()).value(), p.prompt())).collect(Collectors.toList());
+        List<ChatMessage> aiPrompts = lastN.stream().map( (p) -> new ChatMessage(ChatMessageRole.valueOf(p.role().toUpperCase()).value(), p.prompt())).collect(Collectors.toList());
         aiPrompts.add(formatPrompt);
         aiPrompts.add(systemPrompt);
         aiPrompts.addAll(chatPrompts);
@@ -101,7 +106,7 @@ public class Assistant {
     }
 
     public List<List<Double>> embed(List<Prompt> prompt) {
-        EmbeddingRequest embeddingRequest = EmbeddingRequest.builder().model(MODEL).input(prompt.stream().map(Prompt::prompt).toList()).build();
+        EmbeddingRequest embeddingRequest = EmbeddingRequest.builder().model("text-embedding-ada-002").input(prompt.stream().map(Prompt::prompt).toList()).build();
         EmbeddingResult embeddings = openAIClient.createEmbeddings(embeddingRequest);
         List<Embedding> data = embeddings.getData();
 

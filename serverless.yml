@@ -60,7 +60,7 @@ package:
 
 functions:
   webhook:
-    handler: com.tailoredshapes.boobees.WebhookHandler
+    handler: com.tailoredshapes.boobees.steps.webhook.WebhookHandler
     events:
       - http:
           path: webhook
@@ -89,7 +89,7 @@ functions:
         Ref: AnswerQueue
 
   answer:
-    handler: com.tailoredshapes.boobees.SQSTextAndAudioHandler
+    handler: com.tailoredshapes.boobees.steps.text.SQSTextHandler
     events:
       - sqs:
           arn:
@@ -99,7 +99,7 @@ functions:
           batchSize: 10
     environment:
       TELEGRAM_BOT_TOKEN: ${self:custom.secrets.TELEGRAM_BOT_TOKEN}
-      VOICE: ${self:custom.env.VOICE}
+      MODEL: ${self:custom.env.MODEL}
 
 resources:
   Resources:

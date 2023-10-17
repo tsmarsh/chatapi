@@ -1,38 +1,28 @@
-package com.tailoredshapes.boobees;
+package com.tailoredshapes.boobees.steps.audio;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.SQSBatchResponse;
 import com.amazonaws.services.lambda.runtime.events.SQSEvent;
 import com.amazonaws.services.polly.AmazonPolly;
-import com.amazonaws.services.polly.AmazonPollyClientBuilder;
 import com.amazonaws.services.polly.model.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tailoredshapes.boobees.repositories.TelegramRepo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 import static com.tailoredshapes.underbar.ocho.UnderBar.map;
 
-
-public class SQSTextAndAudioHandler implements RequestHandler<SQSEvent, SQSBatchResponse> {
-
-    private static final Logger LOG = LogManager.getLogger(SQSTextAndAudioHandler.class);
-
-    private static TelegramRepo telegramRepo;
-    private final AmazonPolly amazonPolly;
-
-    public SQSTextAndAudioHandler() {
-        telegramRepo = new TelegramRepo(System.getenv("TELEGRAM_BOT_TOKEN"));
-        amazonPolly = AmazonPollyClientBuilder.defaultClient();
-    }
+public record SQSAudioDelegate(TelegramRepo telegramRepo, AmazonPolly amazonPolly)  implements RequestHandler<SQSEvent, SQSBatchResponse> {
 
 
+    private static final Logger LOG = LogManager.getLogger(SQSAudioHandler.class);
+    @Override
     public SQSBatchResponse handleRequest(SQSEvent event, Context context) {
         List<SQSBatchResponse.BatchItemFailure> batchItemFailures = new ArrayList<>();
 
@@ -48,7 +38,6 @@ public class SQSTextAndAudioHandler implements RequestHandler<SQSEvent, SQSBatch
 
                 telegramRepo.sendRecording(chatId);
 
-                var response =  telegramRepo.sendMessageAsync(chatId, answer);
                 SynthesizeSpeechRequest synthesizeSpeechRequest = new SynthesizeSpeechRequest()
                         .withEngine(Engine.Neural)
                         .withOutputFormat(OutputFormat.Mp3)
@@ -57,9 +46,7 @@ public class SQSTextAndAudioHandler implements RequestHandler<SQSEvent, SQSBatch
                         .withTextType(TextType.Text);
                 SynthesizeSpeechResult synthesizeSpeechResult = amazonPolly.synthesizeSpeech(synthesizeSpeechRequest);
 
-                telegramRepo.sendAudioAsync(chatId, synthesizeSpeechResult.getAudioStream());
-
-                return response;
+                return telegramRepo.sendAudioAsync(chatId, synthesizeSpeechResult.getAudioStream());
 
             } catch (Exception e) {
                 LOG.error("Can't process payload", e);
@@ -74,5 +61,4 @@ public class SQSTextAndAudioHandler implements RequestHandler<SQSEvent, SQSBatch
 
         return SQSBatchResponse.builder().withBatchItemFailures(batchItemFailures).build();
     }
-
 }
