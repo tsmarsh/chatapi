@@ -56,7 +56,7 @@ public class Assistant {
 
         LOG.info("Using personality: %s".formatted(systemPrompt));
 
-        List<Prompt> lastN = repo.findLastN(chatId, 30);
+        List<Prompt> lastN = repo.findN(chatId, 30, prompts.get(prompts.size() - 1));
 
         Collections.reverse(lastN);
 

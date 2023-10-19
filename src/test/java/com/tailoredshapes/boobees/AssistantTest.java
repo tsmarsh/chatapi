@@ -55,7 +55,7 @@ class AssistantTest {
         choice.setMessage(new ChatMessage(ChatMessageRole.ASSISTANT.value(), "I'm GPT-3.5-turbo, and here's a joke: Why did the chicken cross the road? To get to the other side!"));
 
         when(chatCompletions.getChoices()).thenReturn(Arrays.asList(choice));
-        when(messageRepo.findLastN(any(Long.class), any(Integer.class))).thenReturn(Collections.emptyList());
+        when(messageRepo.findN(any(Long.class), any(Integer.class), any(String.class))).thenReturn(Collections.emptyList());
 
         String response = assistant.answer(prompts, chatId);
 
@@ -67,7 +67,7 @@ class AssistantTest {
         List<String> prompts = Arrays.asList("What's your name?", "Tell me a joke.");
         Long chatId = 42L;
 
-        when(messageRepo.findLastN(any(Long.class), any(Integer.class))).thenReturn(Collections.emptyList());
+        when(messageRepo.findN(any(Long.class), any(Integer.class), any(String.class))).thenReturn(Collections.emptyList());
 
         Assistant ass = new Assistant(openAiService, "brb", messageRepo, "Just be yourself");
         String response = ass.answer(prompts, chatId);
@@ -89,7 +89,7 @@ class AssistantTest {
         choice.setMessage(new ChatMessage(ChatMessageRole.ASSISTANT.value(), "I'm GPT-3.5-turbo, and here's a joke: Why did the chicken cross the road? To get to the other side!"));
 
         when(chatCompletions.getChoices()).thenReturn(Arrays.asList(choice));
-        when(messageRepo.findLastN(any(Long.class), any(Integer.class))).thenReturn(Collections.emptyList());
+        when(messageRepo.findN(any(Long.class), any(Integer.class),any(String.class))).thenReturn(Collections.emptyList());
 
 
         String response = assistant.answerAsync(prompts, chatId).get();
@@ -110,7 +110,7 @@ class AssistantTest {
 
         List<Prompt> storedPrompts = Arrays.asList(new Prompt("user", "Which way is up"), new Prompt("assistant", "Up is the opposite direction to the force of gravity."));
         when(chatCompletions.getChoices()).thenReturn(Arrays.asList(choice));
-        when(messageRepo.findLastN(any(Long.class), any(Integer.class))).thenReturn(storedPrompts);
+        when(messageRepo.findN(any(Long.class), any(Integer.class), any(String.class))).thenReturn(storedPrompts);
 
 
         String response = assistant.answerAsync(prompts, chatId).get();

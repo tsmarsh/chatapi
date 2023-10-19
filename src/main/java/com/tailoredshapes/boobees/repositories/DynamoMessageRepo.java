@@ -24,7 +24,7 @@ public class DynamoMessageRepo implements MessageRepo {
     }
 
     @Override
-    public List<Prompt> findLastN(Long chatId, int n) {
+    public List<Prompt> findN(Long chatId, int n, String prompt) {
         QueryRequest request = QueryRequest.builder()
                 .tableName(this.tableName)
                 .indexName("ConversationIndex")

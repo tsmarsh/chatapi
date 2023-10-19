@@ -42,7 +42,7 @@ class DynamoMessageRepoTest {
 
         when(dynamoDbClient.query(any(QueryRequest.class))).thenReturn(response);
 
-        List<Prompt> result = messageRepo.findLastN(42L, 2);
+        List<Prompt> result = messageRepo.findN(42L, 2, null);
 
         assertEquals(2, result.size());
         assertEquals("Hello!", result.get(0).prompt());
